@@ -1,72 +1,67 @@
-# Yatharth Music AI — Version 1.1
+# Yatharth Music AI
 
-Mobile-first, original AI music web app prototype.
+Original, mobile-first AI music creation app powered by a FastAPI backend and ACE-Step.
 
-## What this version does
+## Current release
 
-Mobile:
-Prompt/Lyrics → Generate → Yatharth backend → ACE-Step server → task polling → audio URL → mobile player.
+The repository now contains a working browser frontend, backend API, task polling, demo audio, local song history, PWA manifest, environment template, startup script, and GitHub Actions smoke CI.
 
-The browser never needs the ACE-Step secret API key. The backend stores the engine URL/key.
+### User flow
 
-## Important
+**Prompt / lyrics → Generate → task polling → audio player → download → My Songs**
 
-This package does not include AI model weights and does not provide a permanently hosted GPU server.
-For real generation, deploy ACE-Step 1.5 on a reachable machine/GPU and set `MUSIC_ENGINE_URL`.
+The browser does not need the ACE-Step secret key. Keep engine credentials on the backend.
 
-The frontend has DEMO_MODE so you can test the mobile workflow without a model server.
+## Run locally
 
-## Quick start — backend
+Python 3.11+ is recommended.
 
-Python 3.11+ recommended.
+```bash
+python -m venv .venv
+# Linux/macOS: source .venv/bin/activate
+# Windows: .venv\\Scripts\\activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
 
-    cd backend
-    python -m venv .venv
-    # activate the venv
-    pip install -r requirements.txt
-    copy .env.example .env     # Windows
-    # or: cp .env.example .env
+Open the repository's `index.html` through a local/static web server, or serve the project behind the same host as the API.
 
-Edit .env:
+For a simple backend start command:
 
-    DEMO_MODE=true
+```bash
+bash start.sh
+```
 
-Then:
+## Demo mode
 
-    uvicorn main:app --host 0.0.0.0 --port 8080
+The default `.env.example` uses:
 
-Open http://localhost:8080/docs
+```env
+DEMO_MODE=true
+```
 
-## Real ACE-Step connection
+This lets you test the complete UI and API flow without an AI model server. Demo playback is a short generated test tone, not an AI song.
 
-Set:
+## Connect ACE-Step
 
-    DEMO_MODE=false
-    MUSIC_ENGINE_URL=http://YOUR-ACE-STEP-SERVER:8001
-    ACESTEP_API_KEY=
+For real generation, deploy a reachable ACE-Step API server and set:
 
-Then run the backend again.
+```env
+DEMO_MODE=false
+MUSIC_ENGINE_URL=http://YOUR-ACE-STEP-SERVER:8001
+ACESTEP_API_KEY=
+```
 
-The adapter uses ACE-Step's documented:
-POST /release_task
-POST /query_result
-GET /v1/audio?path=...
-
-## Frontend
-
-For easiest mobile testing, open frontend/index.html in a browser, or serve the frontend from a web host.
-
-Set the API base in frontend/app.js:
-
-    const API_BASE = "http://YOUR-BACKEND-HOST:8080";
-
-If the frontend is served by the same backend, leave API_BASE empty.
+The backend integrates with the ACE-Step task flow using `/release_task`, `/query_result`, and the returned audio path. urlACE-Step official repositoryhttps://github.com/ace-step/ACE-Step-1.5
 
 ## API
 
-POST /api/generate
+### POST `/api/generate`
 
-JSON:
+Example:
+
+```json
 {
   "prompt": "uplifting cinematic Punjabi song about hope",
   "lyrics": "",
@@ -77,26 +72,36 @@ JSON:
   "duration": 60,
   "format": "mp3"
 }
+```
 
-Response:
-{
-  "task_id": "...",
-  "status": "queued",
-  "demo": false
-}
+Optional advanced fields supported by the API include `bpm`, `key`, `time_signature`, and `instrumental`.
 
-GET /api/tasks/{task_id}
+### GET `/api/tasks/{task_id}`
 
-Returns queued / processing / completed / failed.
+Returns `queued`, `processing`, `completed`, or `failed` plus progress, metadata, audio URL, and errors.
 
-GET /api/audio/{task_id}
+### GET `/api/audio/{task_id}`
 
-Proxies the generated audio through the backend when ACE-Step returns a server-local /v1/audio path.
+Streams the generated audio through the backend when ACE-Step returns a server-local audio path.
 
-## Safety/product notes
+### GET `/api/health`
 
-- This is an original product; do not copy Suno branding, UI source, private APIs, or proprietary assets.
+Returns backend status and, when not in demo mode, whether the configured engine is reachable.
+
+## Production checklist
+
+- Put the frontend and FastAPI API behind HTTPS.
+- Set `CORS_ORIGINS` to the exact production frontend origin instead of `*`.
+- Keep `ACESTEP_API_KEY` in server secrets; never commit it.
+- Use persistent storage/Redis/PostgreSQL for multi-instance production deployments instead of the current in-memory task store.
+- Use object storage for long-lived audio files rather than keeping a GPU server as permanent file storage.
+- Add authentication, per-user quotas, abuse/rate limiting, billing and provenance metadata before public commercial launch.
+- Run the ACE-Step worker on suitable GPU infrastructure; the GitHub repository itself does not contain model weights or provide a permanent GPU server.
+
+## Product and safety notes
+
+- Yatharth Music AI uses original product branding and should not copy Suno branding, private APIs, source code, or proprietary assets.
 - Do not train on scraped copyrighted music.
 - Do not imitate a named living artist or clone a third-party voice without authorization.
-- Add provenance, consent and licensing metadata before commercial launch.
-- Commercial-use permission for an AI output is not the same thing as guaranteed copyright protection.
+- Add provenance, consent, and licensing metadata before commercial launch.
+- Permission to commercially use an AI output is not automatically the same as guaranteed copyright protection.
