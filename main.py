@@ -25,7 +25,7 @@ POLL_SECONDS = max(0.5, float(os.getenv("POLL_SECONDS", "2")))
 POLL_TIMEOUT = max(30, int(os.getenv("POLL_TIMEOUT_SECONDS", "300")))
 MAX_CONCURRENT = max(1, int(os.getenv("MAX_CONCURRENT_GENERATIONS", "1")))
 
-app = FastAPI(title="Yatharth Music AI API", version="2.1.0")
+app = FastAPI(title="Yatharth Music AI API", version="2.1.1")
 origins = os.getenv("CORS_ORIGINS", "*")
 app.add_middleware(CORSMiddleware, allow_origins=["*"] if origins == "*" else [x.strip() for x in origins.split(",") if x.strip()], allow_credentials=False, allow_methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 
@@ -66,8 +66,10 @@ def headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {API_KEY}"} if API_KEY else {}
 
 def build_prompt(request: GenerateRequest) -> str:
-    voice = VOICE_MAP.get(request.voice, request.voice.lower())
-    return f"{request.genre}, {request.mood}, {voice} vocal style, {request.language} language, polished original song"
+    parts = []
+    if request.prompt.strip(): parts.append(request.prompt.strip())
+    parts.extend([request.genre, request.mood, VOICE_MAP.get(request.voice, request.voice.lower()), f"{request.language} language", "polished original song"])
+    return ", ".join(parts)
 
 async def engine_post(path: str, payload: dict[str, Any]) -> Any:
     async with httpx.AsyncClient(timeout=90) as client:
