@@ -29,40 +29,52 @@
       <div class="grid">
         <div>
           <label for="language">Language</label>
-          <select id="language">
-            <option>Hindi</option><option>Punjabi</option><option>English</option>
-          </select>
+          <select id="language"><option>Hindi</option><option>Punjabi</option><option>English</option></select>
         </div>
         <div>
           <label for="genre">Genre</label>
-          <select id="genre">
-            <option>Cinematic</option><option>Pop</option><option>Folk</option>
-            <option>Lo-fi</option><option>Hip-Hop</option><option>Acoustic</option>
-          </select>
+          <select id="genre"><option>Cinematic</option><option>Pop</option><option>Folk</option><option>Lo-fi</option><option>Hip-Hop</option><option>Acoustic</option></select>
         </div>
         <div>
           <label for="mood">Mood</label>
-          <select id="mood">
-            <option>Emotional</option><option>Happy</option><option>Energetic</option>
-            <option>Peaceful</option><option>Romantic</option><option>Epic</option>
-          </select>
+          <select id="mood"><option>Emotional</option><option>Happy</option><option>Energetic</option><option>Peaceful</option><option>Romantic</option><option>Epic</option></select>
         </div>
         <div>
           <label for="voice">Voice</label>
-          <select id="voice">
-            <option>Male</option><option>Female</option><option>Duet</option><option>Instrumental</option>
-          </select>
+          <select id="voice"><option>Male</option><option>Female</option><option>Duet</option><option>Instrumental</option></select>
         </div>
       </div>
+
+      <details>
+        <summary>Advanced music controls</summary>
+        <div class="grid">
+          <div>
+            <label for="bpm">BPM</label>
+            <input id="bpm" type="number" min="40" max="220" placeholder="Auto">
+          </div>
+          <div>
+            <label for="key">Key / Scale</label>
+            <select id="key">
+              <option value="">Auto</option><option>C major</option><option>D major</option><option>E major</option><option>F major</option><option>G major</option><option>A major</option><option>B major</option>
+              <option>A minor</option><option>B minor</option><option>C minor</option><option>D minor</option><option>E minor</option><option>F minor</option><option>G minor</option>
+            </select>
+          </div>
+          <div>
+            <label for="timeSignature">Time signature</label>
+            <select id="timeSignature"><option value="">Auto</option><option>4/4</option><option>3/4</option><option>6/8</option><option>2/4</option></select>
+          </div>
+          <div>
+            <label for="format">Audio format</label>
+            <select id="format"><option value="mp3">MP3</option><option value="wav">WAV</option><option value="flac">FLAC</option></select>
+          </div>
+        </div>
+        <label class="check"><input id="instrumental" type="checkbox"> Instrumental only</label>
+      </details>
 
       <div class="row">
         <div>
           <label for="duration">Duration</label>
-          <select id="duration">
-            <option value="30">30 sec</option>
-            <option value="60" selected>60 sec</option>
-            <option value="90">90 sec</option>
-          </select>
+          <select id="duration"><option value="30">30 sec</option><option value="60" selected>60 sec</option><option value="90">90 sec</option><option value="120">2 min</option><option value="180">3 min</option></select>
         </div>
         <button id="generate" class="primary">Generate</button>
       </div>
