@@ -70,8 +70,9 @@ goto wait_engine
 :engine_ready
 echo ACE-Step is READY.
 
-a:start_yatharth
+goto start_yatharth
 
+:start_yatharth
 echo [5/5] Starting Yatharth Music AI on http://127.0.0.1:8000 ...
 echo.
 echo Open the app in your browser at:
