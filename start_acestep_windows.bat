@@ -14,6 +14,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
+where python >nul 2>&1
+if errorlevel 1 (
+  echo Python was not found. Install Python 3.11+ first.
+  pause
+  exit /b 1
+)
+
 where uv >nul 2>&1
 if errorlevel 1 (
   echo uv was not found. Installing uv with pip...
@@ -27,7 +34,7 @@ if errorlevel 1 (
 
 if not exist "ACE-Step-1.5" (
   echo [1/3] Downloading official ACE-Step repository...
-  git clone --depth 1 https://github.com/ace-step/ACE-Step-1.5.git ACE-Step-1.5
+  git clone --depth 1 https://github.com/ACE-Step/ACE-Step-1.5.git ACE-Step-1.5
   if errorlevel 1 (
     echo ACE-Step download failed.
     pause
@@ -48,6 +55,6 @@ if errorlevel 1 (
 echo [3/3] Starting ACE-Step API on port 8001...
 echo Keep this window open while Yatharth Music AI is generating music.
 echo.
-uv run acestep-api --host 127.0.0.1 --port 8001
+uv run python -m acestep.api_server --host 127.0.0.1 --port 8001
 
 pause
