@@ -40,9 +40,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if not exist ".env" (
-  copy /y ".env.example" ".env" >nul
-)
+if not exist ".env" copy /y ".env.example" ".env" >nul
 
 set "DEMO_MODE=false"
 set "MUSIC_ENGINE_URL=http://127.0.0.1:8001"
@@ -57,26 +55,29 @@ set /a attempts=0
 set /a attempts+=1
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 3 http://127.0.0.1:8001/health; if($r.StatusCode -eq 200){exit 0}else{exit 1} } catch { exit 1 }" >nul 2>&1
 if not errorlevel 1 goto engine_ready
-if !attempts! GEQ 90 (
-  echo.
-  echo ACE-Step did not become ready within 3 minutes.
-  echo Yatharth can still be started in DEMO mode if needed.
-  echo.
-  goto start_yatharth
-)
+if !attempts! GEQ 90 goto engine_failed
 timeout /t 2 /nobreak >nul
 goto wait_engine
 
 :engine_ready
 echo ACE-Step is READY.
-
+echo.
 goto start_yatharth
+
+:engine_failed
+echo.
+echo ACE-Step did not become ready within 3 minutes.
+echo Starting Yatharth in DEMO mode so the interface remains usable.
+echo Real AI generation will work after ACE-Step is available.
+echo.
+set "DEMO_MODE=true"
 
 :start_yatharth
 echo [5/5] Starting Yatharth Music AI on http://127.0.0.1:8000 ...
 echo.
 echo Open the app in your browser at:
 echo http://127.0.0.1:8000
+echo.
 .venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
 
 pause
