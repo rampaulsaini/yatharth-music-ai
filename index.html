@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="Yatharth Music AI — original mobile-first AI music creation">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <title>Yatharth Music AI</title>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <div class="brand">YATHARTH MUSIC AI</div>
+        <div class="tagline">Your Words. Your Music. Your Creation.</div>
+      </div>
+      <span id="modeBadge" class="badge">Checking…</span>
+    </header>
+
+    <section class="card">
+      <label for="prompt">Song idea / prompt</label>
+      <textarea id="prompt" maxlength="2000" placeholder="Example: A cinematic Hindi song about hope after a difficult journey"></textarea>
+
+      <label for="lyrics">Lyrics (optional)</label>
+      <textarea id="lyrics" maxlength="8000" placeholder="Paste or write your own lyrics…"></textarea>
+
+      <div class="grid">
+        <div>
+          <label for="language">Language</label>
+          <select id="language">
+            <option>Hindi</option><option>Punjabi</option><option>English</option>
+          </select>
+        </div>
+        <div>
+          <label for="genre">Genre</label>
+          <select id="genre">
+            <option>Cinematic</option><option>Pop</option><option>Folk</option>
+            <option>Lo-fi</option><option>Hip-Hop</option><option>Acoustic</option>
+          </select>
+        </div>
+        <div>
+          <label for="mood">Mood</label>
+          <select id="mood">
+            <option>Emotional</option><option>Happy</option><option>Energetic</option>
+            <option>Peaceful</option><option>Romantic</option><option>Epic</option>
+          </select>
+        </div>
+        <div>
+          <label for="voice">Voice</label>
+          <select id="voice">
+            <option>Male</option><option>Female</option><option>Duet</option><option>Instrumental</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="duration">Duration</label>
+          <select id="duration">
+            <option value="30">30 sec</option>
+            <option value="60" selected>60 sec</option>
+            <option value="90">90 sec</option>
+          </select>
+        </div>
+        <button id="generate" class="primary">Generate</button>
+      </div>
+
+      <div id="status" class="status">Ready.</div>
+    </section>
+
+    <section id="result" class="card hidden">
+      <h2>Your creation</h2>
+      <audio id="player" controls preload="metadata"></audio>
+      <a id="download" class="download" href="#" download="yatharth-song.mp3">Download audio</a>
+      <div id="meta" class="meta"></div>
+    </section>
+
+    <section class="card">
+      <h2>My Songs</h2>
+      <div id="history" class="history">No generated songs yet.</div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
