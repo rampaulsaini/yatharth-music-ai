@@ -70,13 +70,17 @@ def test_generate_poll_audio_and_delete():
 def test_task_status_and_audio_are_owner_only():
     owner = TestClient(app)
     other = TestClient(app)
-    response = owner.post("/api/generate", json={"prompt": "private test song"})
-    assert response.status_code == 200
-    task_id = response.json()["task_id"]
-
     original = os.environ.get("TRUST_PROXY")
     os.environ["TRUST_PROXY"] = "true"
     try:
+        response = owner.post(
+            "/api/generate",
+            json={"prompt": "private test song"},
+            headers={"X-Forwarded-For": "10.0.0.1"},
+        )
+        assert response.status_code == 200
+        task_id = response.json()["task_id"]
+
         assert owner.get(f"/api/tasks/{task_id}", headers={"X-Forwarded-For": "10.0.0.1"}).status_code == 200
         assert other.get(f"/api/tasks/{task_id}", headers={"X-Forwarded-For": "10.0.0.2"}).status_code == 403
         assert other.get(f"/api/audio/{task_id}", headers={"X-Forwarded-For": "10.0.0.2"}).status_code == 403
