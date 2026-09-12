@@ -28,6 +28,7 @@ POLL_TIMEOUT = max(30, int(os.getenv("POLL_TIMEOUT_SECONDS", "300")))
 MAX_CONCURRENT = max(1, int(os.getenv("MAX_CONCURRENT_GENERATIONS", "2")))
 RATE_LIMIT = max(1, int(os.getenv("RATE_LIMIT_PER_MINUTE", "10")))
 MAX_TASKS = max(100, int(os.getenv("MAX_TASKS_IN_MEMORY", "2000")))
+MAX_RATE_CLIENTS = max(100, int(os.getenv("MAX_RATE_LIMIT_CLIENTS", "10000")))
 ROOT = Path(__file__).resolve().parent
 
 app = FastAPI(title="Yatharth Music AI API", version="3.0.1", docs_url="/api/docs", redoc_url="/api/redoc")
@@ -94,6 +95,15 @@ def enforce_rate_limit(request: Request) -> str:
     if len(window) >= RATE_LIMIT:
         raise HTTPException(429, "Rate limit exceeded. Please try again later.")
     window.append(now)
+    if len(rate_windows) > MAX_RATE_CLIENTS:
+        stale_before = now - 60
+        stale_clients = [key for key, timestamps in rate_windows.items() if not timestamps or timestamps[-1] < stale_before]
+        for key in stale_clients:
+            rate_windows.pop(key, None)
+        if len(rate_windows) > MAX_RATE_CLIENTS:
+            oldest_key = min(rate_windows, key=lambda key: rate_windows[key][-1] if rate_windows[key] else 0)
+            if oldest_key != cid:
+                rate_windows.pop(oldest_key, None)
     return cid
 
 
