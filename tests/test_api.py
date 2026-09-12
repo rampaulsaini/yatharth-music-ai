@@ -5,7 +5,6 @@ from pathlib import Path
 os.environ["DEMO_MODE"] = "true"
 os.environ["RATE_LIMIT_PER_MINUTE"] = "1000"
 
-# Keep the application root importable when pytest is invoked with tests/ as its path.
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -66,6 +65,30 @@ def test_generate_poll_audio_and_delete():
     deleted = client.delete(f"/api/tasks/{task_id}")
     assert deleted.status_code == 200
     assert client.get(f"/api/tasks/{task_id}").status_code == 404
+
+
+def test_task_status_and_audio_are_owner_only():
+    owner = TestClient(app)
+    other = TestClient(app)
+
+    response = owner.post("/api/generate", json={"prompt": "private test song"})
+    assert response.status_code == 200
+    task_id = response.json()["task_id"]
+
+    # TestClient clients normally use the same host; override the request identity
+    # with a forwarded address only when proxy trust is explicitly enabled.
+    original = os.environ.get("TRUST_PROXY")
+    os.environ["TRUST_PROXY"] = "true"
+    try:
+        assert owner.get(f"/api/tasks/{task_id}", headers={"X-Forwarded-For": "10.0.0.1"}).status_code == 200
+        assert other.get(f"/api/tasks/{task_id}", headers={"X-Forwarded-For": "10.0.0.2"}).status_code == 403
+        assert other.get(f"/api/audio/{task_id}", headers={"X-Forwarded-For": "10.0.0.2"}).status_code == 403
+        assert owner.get(f"/api/audio/{task_id}", headers={"X-Forwarded-For": "10.0.0.1"}).status_code == 200
+    finally:
+        if original is None:
+            os.environ.pop("TRUST_PROXY", None)
+        else:
+            os.environ["TRUST_PROXY"] = original
 
 
 def test_generation_validation():
