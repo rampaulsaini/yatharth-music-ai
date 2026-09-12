@@ -18,21 +18,36 @@ The repository includes `colab/Yatharth_Music_AI_Free_GPU.ipynb`. It starts the 
 
 Free notebook runtimes can disconnect or change availability. Treat this as development/testing, not dependable public hosting.
 
-## 3. Hugging Face ZeroGPU — experimental public demo route
+## 3. Hugging Face ZeroGPU — public demo adapter
 
-Hugging Face ZeroGPU is a useful option for a small public experiment, but current ZeroGPU Spaces have important limits: ZeroGPU Spaces are designed for Gradio, and free accounts have a daily GPU quota. Quotas and provider rules can change.
-
-For Yatharth Music AI, the recommended architecture is:
+The repository now contains `hf_space/`, a standalone Gradio adapter. It keeps the public UI separate from the production API and engine:
 
 ```text
 Browser
-  -> Yatharth API / UI
-  -> small Gradio/ZeroGPU adapter
-  -> ACE-Step
+  -> Hugging Face Gradio Space
+  -> YATHARTH_API_BASE_URL
+  -> Yatharth API
+  -> ACE-Step / configured music engine
   -> generated audio
 ```
 
-Do not put private engine credentials in browser JavaScript. Do not assume ZeroGPU can provide production-scale 24/7 generation for free.
+The adapter uses `YATHARTH_API_BASE_URL` and an optional `YATHARTH_API_TOKEN`. Credentials are not hard-coded in the repository.
+
+Current Hugging Face ZeroGPU is shared, quota-limited infrastructure. It is suitable for demonstrations/testing, **not unlimited production compute**. The Space itself is also kept intentionally thin so the AI engine can be upgraded independently.
+
+### Automatic deployment
+
+`.github/workflows/sync-huggingface-space.yml` is included for automatic sync after changes to `hf_space/`.
+
+One-time GitHub setup:
+
+1. Create a fine-grained Hugging Face token with write access to the target Space repository.
+2. Add it as the GitHub Actions secret `HF_TOKEN`.
+3. Add the GitHub Actions repository variable `HF_SPACE_REPO`, for example `your-hf-username/yatharth-music-ai`.
+4. In the Hugging Face Space settings, configure `YATHARTH_API_BASE_URL` and, if required, `YATHARTH_API_TOKEN`.
+5. Use a **Gradio + ZeroGPU** Space for the free public-demo route.
+
+The workflow syncs only `hf_space/` into the Space, so the main FastAPI application and deployment files remain separate.
 
 ## 4. Local NVIDIA GPU
 
