@@ -1,8 +1,57 @@
 services:
   api:
     build: .
+    container_name: yatharth-music-ai
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:8080"
     env_file:
       - .env
+    environment:
+      PORT: 8080
+      DEMO_MODE: ${DEMO_MODE:-true}
+      MUSIC_ENGINE_URL: ${MUSIC_ENGINE_URL:-http://acestep:8001}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+    depends_on:
+      acestep:
+        condition: service_healthy
     restart: unless-stopped
+
+  acestep:
+    image: ghcr.io/ace-step/ace-step-1.5:latest
+    container_name: yatharth-acestep
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      ACESTEP_MODE: api
+      ACESTEP_INIT_SERVICE: ${ACESTEP_INIT_SERVICE:-true}
+      ACESTEP_CONFIG_PATH: ${ACESTEP_CONFIG_PATH:-acestep-v15-turbo}
+      ACESTEP_LM_MODEL_PATH: ${ACESTEP_LM_MODEL_PATH:-acestep-5Hz-lm-4B}
+      ACESTEP_LLM_BACKEND: ${ACESTEP_LLM_BACKEND:-pt}
+      TOKENIZERS_PARALLELISM: "false"
+    ports:
+      - "127.0.0.1:${ACESTEP_PORT:-8001}:8001"
+    volumes:
+      - acestep_checkpoints:/app/checkpoints
+      - acestep_hf_cache:/root/.cache/huggingface
+      - acestep_output:/app/output
+      - acestep_gradio_output:/app/gradio_outputs
+    shm_size: "2gb"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/health >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 300s
+      retries: 5
+
+volumes:
+  acestep_checkpoints:
+  acestep_hf_cache:
+  acestep_output:
+  acestep_gradio_output:
