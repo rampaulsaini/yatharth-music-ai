@@ -11,12 +11,12 @@ services:
       DEMO_MODE: ${DEMO_MODE:-true}
       MUSIC_ENGINE_URL: ${MUSIC_ENGINE_URL:-http://acestep:8001}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
-    depends_on:
-      acestep:
-        condition: service_healthy
     restart: unless-stopped
 
+  # Optional local GPU engine. Start only when NVIDIA Container Toolkit/GPU is available:
+  # docker compose --profile gpu up --build
   acestep:
+    profiles: ["gpu"]
     image: ghcr.io/ace-step/ace-step-1.5:latest
     container_name: yatharth-acestep
     deploy:
