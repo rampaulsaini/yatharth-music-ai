@@ -31,9 +31,9 @@ RATE_LIMIT = max(1, int(os.getenv("RATE_LIMIT_PER_MINUTE", "10")))
 MAX_TASKS = max(100, int(os.getenv("MAX_TASKS_IN_MEMORY", "2000")))
 ROOT = Path(__file__).resolve().parent
 
-app = FastAPI(title="Yatharth Music AI API", version="3.0.0", docs_url="/api/docs", redoc_url="/api/redoc")
+app = FastAPI(title="Yatharth Music AI API", version="3.0.1", docs_url="/api/docs", redoc_url="/api/redoc")
 origins = os.getenv("CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000")
-app.add_middleware(CORSMiddleware, allow_origins=[x.strip() for x in origins.split(",") if x.strip()], allow_credentials=False, allow_methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+app.add_middleware(CORSMiddleware, allow_origins=[x.strip() for x in origins.split(",") if x.strip()], allow_credentials=False, allow_methods=["GET", "POST", "DELETE", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 
 class GenerateRequest(BaseModel):
     prompt: str = Field(default="", max_length=2000)
@@ -79,8 +79,12 @@ VOICE_MAP = {"Male": "male", "Female": "female", "Duet": "duet", "Instrumental":
 
 
 def client_id(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-    return forwarded or (request.client.host if request.client else "unknown")
+    # Only trust X-Forwarded-For when explicitly enabled by the deployment.
+    if os.getenv("TRUST_PROXY", "false").lower() == "true":
+        forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        if forwarded:
+            return forwarded
+    return request.client.host if request.client else "unknown"
 
 
 def enforce_rate_limit(request: Request) -> str:
@@ -155,15 +159,7 @@ async def health():
                 reachable = response.status_code < 500
         except Exception:
             reachable = False
-    return {
-        "ok": True,
-        "version": app.version,
-        "demo_mode": DEMO_MODE,
-        "engine_url_configured": bool(ENGINE_URL),
-        "engine_reachable": reachable,
-        "active_tasks": sum(t.status in {"queued", "processing"} for t in tasks.values()),
-        "max_concurrent": MAX_CONCURRENT,
-    }
+    return {"ok": True, "version": app.version, "demo_mode": DEMO_MODE, "engine_url_configured": bool(ENGINE_URL), "engine_reachable": reachable, "active_tasks": sum(t.status in {"queued", "processing"} for t in tasks.values()), "max_concurrent": MAX_CONCURRENT}
 
 
 @app.get("/api/config")
@@ -218,14 +214,7 @@ async def run_engine_task(task: Task):
     async with engine_slots:
         task.status = "processing"
         request = task.request
-        payload: dict[str, Any] = {
-            "prompt": build_prompt(request),
-            "lyrics": "" if request.instrumental or request.voice == "Instrumental" else request.lyrics,
-            "thinking": True,
-            "vocal_language": LANG_MAP.get(request.language, "en"),
-            "audio_duration": request.duration,
-            "audio_format": request.format,
-        }
+        payload: dict[str, Any] = {"prompt": build_prompt(request), "lyrics": "" if request.instrumental or request.voice == "Instrumental" else request.lyrics, "thinking": True, "vocal_language": LANG_MAP.get(request.language, "en"), "audio_duration": request.duration, "audio_format": request.format}
         if request.instrumental or request.voice == "Instrumental":
             payload["prompt"] += ", instrumental"
         if request.bpm is not None:
@@ -343,5 +332,7 @@ async def home():
     return FileResponse(ROOT / "index.html")
 
 
-# Serve static assets after API routes.
-app.mount("/static", StaticFiles(directory=str(ROOT)), name="static")
+# The frontend references root-level assets. Mounting at /static would break those URLs.
+# Serve them explicitly after API routes.
+for asset in ("app.js", "style.css", "manifest.json"):
+    app.get(f"/{asset}")(lambda asset=asset: FileResponse(ROOT / asset))
