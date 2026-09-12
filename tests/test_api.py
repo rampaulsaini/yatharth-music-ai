@@ -4,6 +4,7 @@ from pathlib import Path
 
 os.environ["DEMO_MODE"] = "true"
 os.environ["RATE_LIMIT_PER_MINUTE"] = "1000"
+os.environ["MAX_REQUEST_BYTES"] = "32768"
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -112,6 +113,12 @@ def test_random_sample_and_format_input_in_demo_mode():
     formatted = client.post("/api/format-input", json={"prompt": "  hello world  "})
     assert formatted.status_code == 200
     assert formatted.json()["text"] == "hello world"
+
+
+def test_request_body_size_limit():
+    oversized = {"prompt": "x" * 40000}
+    response = client.post("/api/generate", json=oversized)
+    assert response.status_code == 413
 
 
 def test_security_headers():
