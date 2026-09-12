@@ -17,7 +17,8 @@ services:
   # docker compose --profile gpu up --build
   acestep:
     profiles: ["gpu"]
-    image: ghcr.io/ace-step/ace-step-1.5:latest
+    # Pin the tested release instead of the mutable latest tag.
+    image: ghcr.io/ace-step/ace-step-1.5:0.1.8
     container_name: yatharth-acestep
     deploy:
       resources:
@@ -29,6 +30,7 @@ services:
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       ACESTEP_MODE: api
+      ACESTEP_API_KEY: ${ACESTEP_API_KEY:-}
       ACESTEP_INIT_SERVICE: ${ACESTEP_INIT_SERVICE:-true}
       ACESTEP_CONFIG_PATH: ${ACESTEP_CONFIG_PATH:-acestep-v15-turbo}
       ACESTEP_LM_MODEL_PATH: ${ACESTEP_LM_MODEL_PATH:-acestep-5Hz-lm-4B}
