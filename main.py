@@ -29,6 +29,7 @@ MAX_CONCURRENT = max(1, int(os.getenv("MAX_CONCURRENT_GENERATIONS", "2")))
 RATE_LIMIT = max(1, int(os.getenv("RATE_LIMIT_PER_MINUTE", "10")))
 MAX_TASKS = max(100, int(os.getenv("MAX_TASKS_IN_MEMORY", "2000")))
 MAX_RATE_CLIENTS = max(100, int(os.getenv("MAX_RATE_LIMIT_CLIENTS", "10000")))
+MAX_REQUEST_BYTES = max(4096, int(os.getenv("MAX_REQUEST_BYTES", "32768")))
 ROOT = Path(__file__).resolve().parent
 
 app = FastAPI(title="Yatharth Music AI API", version="3.0.1", docs_url="/api/docs", redoc_url="/api/redoc")
@@ -96,14 +97,12 @@ def enforce_rate_limit(request: Request) -> str:
         raise HTTPException(429, "Rate limit exceeded. Please try again later.")
     window.append(now)
     if len(rate_windows) > MAX_RATE_CLIENTS:
-        stale_before = now - 60
-        stale_clients = [key for key, timestamps in rate_windows.items() if not timestamps or timestamps[-1] < stale_before]
-        for key in stale_clients:
+        stale = [key for key, values in rate_windows.items() if not values or now - values[-1] > 60]
+        for key in stale:
             rate_windows.pop(key, None)
-        if len(rate_windows) > MAX_RATE_CLIENTS:
-            oldest_key = min(rate_windows, key=lambda key: rate_windows[key][-1] if rate_windows[key] else 0)
-            if oldest_key != cid:
-                rate_windows.pop(oldest_key, None)
+        while len(rate_windows) > MAX_RATE_CLIENTS:
+            oldest = min(rate_windows, key=lambda key: rate_windows[key][-1] if rate_windows[key] else 0)
+            rate_windows.pop(oldest, None)
     return cid
 
 
@@ -145,6 +144,18 @@ def prune_tasks() -> None:
     old = sorted(tasks.values(), key=lambda x: x.created)
     for task in old[: len(tasks) - MAX_TASKS]:
         tasks.pop(task.id, None)
+
+
+@app.middleware("http")
+async def request_size_limit(request: Request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_REQUEST_BYTES:
+                return Response("Request body too large", status_code=413, media_type="text/plain")
+        except ValueError:
+            return Response("Invalid Content-Length", status_code=400, media_type="text/plain")
+    return await call_next(request)
 
 
 @app.middleware("http")
