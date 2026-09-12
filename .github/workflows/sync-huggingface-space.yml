@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: huggingface-space-sync
+  cancel-in-progress: false
+
 jobs:
   sync:
     name: Sync Gradio adapter to Hugging Face
