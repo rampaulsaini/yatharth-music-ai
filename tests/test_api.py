@@ -70,13 +70,10 @@ def test_generate_poll_audio_and_delete():
 def test_task_status_and_audio_are_owner_only():
     owner = TestClient(app)
     other = TestClient(app)
-
     response = owner.post("/api/generate", json={"prompt": "private test song"})
     assert response.status_code == 200
     task_id = response.json()["task_id"]
 
-    # TestClient clients normally use the same host; override the request identity
-    # with a forwarded address only when proxy trust is explicitly enabled.
     original = os.environ.get("TRUST_PROXY")
     os.environ["TRUST_PROXY"] = "true"
     try:
