@@ -1,98 +1,83 @@
 <!doctype html>
-<html lang="en">
+<html lang="hi">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
-  <meta name="description" content="Yatharth Music AI — original mobile-first AI music creation">
+  <meta name="theme-color" content="#09090b">
+  <meta name="description" content="Yatharth Music AI — create original AI music from your words and lyrics.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="/">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
-  <title>Yatharth Music AI</title>
+  <title>Yatharth Music AI — AI Music Creation</title>
 </head>
 <body>
   <main class="app">
     <header>
       <div>
         <div class="brand">YATHARTH MUSIC AI</div>
-        <div class="tagline">Your Words. Your Music. Your Creation.</div>
+        <div class="tagline">आपके शब्द • आपका संगीत • आपकी रचना</div>
       </div>
-      <span id="modeBadge" class="badge">Checking…</span>
+      <span id="modeBadge" class="badge">जाँच…</span>
     </header>
+
+    <section class="hero card">
+      <p class="eyebrow">CREATE ORIGINAL MUSIC</p>
+      <h1>अपने विचारों को संगीत में बदलें</h1>
+      <p class="hero-copy">Prompt या lyrics लिखें, style चुनें और अपनी original music creation बनाएं।</p>
+      <div class="quick-actions">
+        <button id="sample" type="button">Random idea</button>
+        <button id="clear" type="button">Clear</button>
+      </div>
+    </section>
 
     <section class="card">
       <label for="prompt">Song idea / prompt</label>
-      <textarea id="prompt" maxlength="2000" placeholder="Example: A cinematic Hindi song about hope after a difficult journey"></textarea>
+      <textarea id="prompt" maxlength="2000" placeholder="उदाहरण: आशा और नई शुरुआत पर एक cinematic Hindi song"></textarea>
+      <div class="counter"><span id="promptCount">0</span>/2000</div>
 
       <label for="lyrics">Lyrics (optional)</label>
-      <textarea id="lyrics" maxlength="8000" placeholder="Paste or write your own lyrics…"></textarea>
+      <textarea id="lyrics" maxlength="8000" placeholder="अपने lyrics लिखें या paste करें…"></textarea>
+      <div class="counter"><span id="lyricsCount">0</span>/8000</div>
 
       <div class="grid">
-        <div>
-          <label for="language">Language</label>
-          <select id="language"><option>Hindi</option><option>Punjabi</option><option>English</option></select>
-        </div>
-        <div>
-          <label for="genre">Genre</label>
-          <select id="genre"><option>Cinematic</option><option>Pop</option><option>Folk</option><option>Lo-fi</option><option>Hip-Hop</option><option>Acoustic</option></select>
-        </div>
-        <div>
-          <label for="mood">Mood</label>
-          <select id="mood"><option>Emotional</option><option>Happy</option><option>Energetic</option><option>Peaceful</option><option>Romantic</option><option>Epic</option></select>
-        </div>
-        <div>
-          <label for="voice">Voice</label>
-          <select id="voice"><option>Male</option><option>Female</option><option>Duet</option><option>Instrumental</option></select>
-        </div>
+        <div><label for="language">Language</label><select id="language"><option>Hindi</option><option>Punjabi</option><option>English</option><option>Sanskrit</option><option>Urdu</option><option>Bengali</option></select></div>
+        <div><label for="genre">Genre</label><select id="genre"><option>Cinematic</option><option>Pop</option><option>Folk</option><option>Lo-fi</option><option>Hip-Hop</option><option>Acoustic</option><option>Classical</option><option>Ambient</option><option>Rock</option></select></div>
+        <div><label for="mood">Mood</label><select id="mood"><option>Emotional</option><option>Happy</option><option>Energetic</option><option>Peaceful</option><option>Romantic</option><option>Epic</option><option>Hopeful</option><option>Meditative</option></select></div>
+        <div><label for="voice">Voice</label><select id="voice"><option>Male</option><option>Female</option><option>Duet</option><option>Instrumental</option></select></div>
       </div>
 
       <details>
         <summary>Advanced music controls</summary>
         <div class="grid">
-          <div>
-            <label for="bpm">BPM</label>
-            <input id="bpm" type="number" min="40" max="220" placeholder="Auto">
-          </div>
-          <div>
-            <label for="key">Key / Scale</label>
-            <select id="key">
-              <option value="">Auto</option><option>C major</option><option>D major</option><option>E major</option><option>F major</option><option>G major</option><option>A major</option><option>B major</option>
-              <option>A minor</option><option>B minor</option><option>C minor</option><option>D minor</option><option>E minor</option><option>F minor</option><option>G minor</option>
-            </select>
-          </div>
-          <div>
-            <label for="timeSignature">Time signature</label>
-            <select id="timeSignature"><option value="">Auto</option><option>4/4</option><option>3/4</option><option>6/8</option><option>2/4</option></select>
-          </div>
-          <div>
-            <label for="format">Audio format</label>
-            <select id="format"><option value="mp3">MP3</option><option value="wav">WAV</option><option value="flac">FLAC</option></select>
-          </div>
+          <div><label for="bpm">BPM</label><input id="bpm" type="number" min="40" max="220" placeholder="Auto"></div>
+          <div><label for="key">Key / Scale</label><select id="key"><option value="">Auto</option><option>C major</option><option>D major</option><option>E major</option><option>F major</option><option>G major</option><option>A major</option><option>B major</option><option>A minor</option><option>B minor</option><option>C minor</option><option>D minor</option><option>E minor</option><option>F minor</option><option>G minor</option></select></div>
+          <div><label for="timeSignature">Time signature</label><select id="timeSignature"><option value="">Auto</option><option>4/4</option><option>3/4</option><option>6/8</option><option>2/4</option></select></div>
+          <div><label for="format">Audio format</label><select id="format"><option value="mp3">MP3</option><option value="wav">WAV</option><option value="flac">FLAC</option></select></div>
         </div>
         <label class="check"><input id="instrumental" type="checkbox"> Instrumental only</label>
       </details>
 
       <div class="row">
-        <div>
-          <label for="duration">Duration</label>
-          <select id="duration"><option value="30">30 sec</option><option value="60" selected>60 sec</option><option value="90">90 sec</option><option value="120">2 min</option><option value="180">3 min</option></select>
-        </div>
-        <button id="generate" class="primary">Generate</button>
+        <div><label for="duration">Duration</label><select id="duration"><option value="30">30 sec</option><option value="60" selected>60 sec</option><option value="90">90 sec</option><option value="120">2 min</option><option value="180">3 min</option><option value="300">5 min</option></select></div>
+        <button id="generate" class="primary" type="button">Generate Music</button>
       </div>
-
       <div id="status" class="status">Ready.</div>
     </section>
 
     <section id="result" class="card hidden">
-      <h2>Your creation</h2>
+      <div class="section-head"><h2>Your creation</h2><span id="resultBadge" class="badge">READY</span></div>
       <audio id="player" controls preload="metadata"></audio>
       <a id="download" class="download" href="#" download="yatharth-song.mp3">Download audio</a>
       <div id="meta" class="meta"></div>
     </section>
 
     <section class="card">
-      <h2>My Songs</h2>
+      <div class="section-head"><h2>My Songs</h2><button id="clearHistory" class="text-button" type="button">Clear history</button></div>
       <div id="history" class="history">No generated songs yet.</div>
     </section>
+
+    <footer>Yatharth Music AI • Original creations • <a href="/api/docs">API Docs</a></footer>
   </main>
   <script src="app.js"></script>
 </body>
