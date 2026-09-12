@@ -1,7 +1,14 @@
 import os
+import sys
+from pathlib import Path
 
 os.environ["DEMO_MODE"] = "true"
 os.environ["RATE_LIMIT_PER_MINUTE"] = "1000"
+
+# Keep the application root importable when pytest is invoked with tests/ as its path.
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from fastapi.testclient import TestClient
 
