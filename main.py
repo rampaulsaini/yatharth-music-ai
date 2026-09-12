@@ -16,7 +16,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
@@ -318,8 +317,10 @@ async def audio(task_id: str):
 
 
 @app.get("/api/tasks")
-async def list_tasks():
-    return [{"task_id": t.id, "status": t.status, "created": t.created, "audio_url": t.audio_url} for t in sorted(tasks.values(), key=lambda x: x.created, reverse=True)[:50]]
+async def list_tasks(http_request: Request):
+    # Do not expose other users' task metadata; history is scoped to the caller.
+    cid = client_id(http_request)
+    return [{"task_id": t.id, "status": t.status, "created": t.created, "audio_url": t.audio_url} for t in sorted(tasks.values(), key=lambda x: x.created, reverse=True) if t.client_id == cid][:50]
 
 
 @app.get("/robots.txt")
