@@ -15,6 +15,9 @@ concurrency:
   group: huggingface-space-sync
   cancel-in-progress: false
 
+env:
+  HF_SPACE_REPO: ${{ vars.HF_SPACE_REPO || 'rampaulsaini/yatharth-music-ai' }}
+
 jobs:
   sync:
     name: Sync Gradio adapter to Hugging Face
@@ -25,17 +28,17 @@ jobs:
 
       - name: Validate deployment configuration
         env:
-          HF_SPACE_REPO: ${{ vars.HF_SPACE_REPO }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          test -n "$HF_SPACE_REPO" || { echo "Missing repository variable HF_SPACE_REPO (example: username/yatharth-music-ai)."; exit 1; }
+          test -n "$HF_SPACE_REPO" || { echo "Missing Hugging Face Space repository id."; exit 1; }
           test -n "$HF_TOKEN" || { echo "Missing repository secret HF_TOKEN."; exit 1; }
+          echo "Hugging Face Space target: $HF_SPACE_REPO"
 
       - name: Sync Space files
         uses: huggingface/hub-sync@v0.1.0
         with:
           github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: ${{ vars.HF_SPACE_REPO }}
+          huggingface_repo_id: ${{ env.HF_SPACE_REPO }}
           hf_token: ${{ secrets.HF_TOKEN }}
           repo_type: space
           space_sdk: gradio
