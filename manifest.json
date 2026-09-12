@@ -1,10 +1,12 @@
 {
   "name": "Yatharth Music AI",
   "short_name": "Yatharth AI",
-  "description": "Original mobile-first AI music creation",
+  "description": "Create original AI music from prompts and lyrics.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0b1020",
-  "theme_color": "#111827",
-  "icons": []
+  "background_color": "#07070a",
+  "theme_color": "#09090b",
+  "lang": "hi",
+  "categories": ["music", "entertainment", "artificial-intelligence"]
 }
