@@ -78,7 +78,6 @@ VOICE_MAP = {"Male": "male", "Female": "female", "Duet": "duet", "Instrumental":
 
 
 def client_id(request: Request) -> str:
-    # Only trust X-Forwarded-For when explicitly enabled by the deployment.
     if os.getenv("TRUST_PROXY", "false").lower() == "true":
         forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
         if forwarded:
@@ -260,10 +259,13 @@ async def run_engine_task(task: Task):
 
 
 @app.get("/api/tasks/{task_id}")
-async def get_task(task_id: str):
+async def get_task(task_id: str, http_request: Request):
+    cid = client_id(http_request)
     task = tasks.get(task_id)
     if not task:
         raise HTTPException(404, "task not found")
+    if task.client_id != cid:
+        raise HTTPException(403, "not allowed")
     return {"task_id": task.id, "status": task.status, "progress": task.progress, "audio_url": task.audio_url, "metadata": task.metadata, "error": task.error, "demo": DEMO_MODE, "created": task.created}
 
 
@@ -294,10 +296,13 @@ def demo_wav_bytes(seconds: int = 3, sample_rate: int = 22050) -> bytes:
 
 
 @app.get("/api/audio/{task_id}")
-async def audio(task_id: str):
+async def audio(task_id: str, http_request: Request):
+    cid = client_id(http_request)
     task = tasks.get(task_id)
     if not task or task.status != "completed":
         raise HTTPException(404, "audio not ready")
+    if task.client_id != cid:
+        raise HTTPException(403, "not allowed")
     if DEMO_MODE:
         return Response(content=demo_wav_bytes(), media_type="audio/wav", headers={"Content-Disposition": 'inline; filename="yatharth-demo.wav"'})
     if not task.engine_file:
@@ -318,7 +323,6 @@ async def audio(task_id: str):
 
 @app.get("/api/tasks")
 async def list_tasks(http_request: Request):
-    # Do not expose other users' task metadata; history is scoped to the caller.
     cid = client_id(http_request)
     return [{"task_id": t.id, "status": t.status, "created": t.created, "audio_url": t.audio_url} for t in sorted(tasks.values(), key=lambda x: x.created, reverse=True) if t.client_id == cid][:50]
 
@@ -333,7 +337,5 @@ async def home():
     return FileResponse(ROOT / "index.html")
 
 
-# The frontend references root-level assets. Mounting at /static would break those URLs.
-# Serve them explicitly after API routes.
 for asset in ("app.js", "style.css", "manifest.json"):
     app.get(f"/{asset}")(lambda asset=asset: FileResponse(ROOT / asset))
