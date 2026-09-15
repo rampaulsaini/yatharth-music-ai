@@ -20,6 +20,16 @@ Original, mobile-first AI music creation app powered by FastAPI and ACE-Step.
 - Docker deployment
 - GitHub Actions smoke CI
 
+## Free AI testing — Google Colab
+
+The repository includes a ready-to-run free GPU notebook that starts **ACE-Step 1.5 + the Yatharth backend** and creates a temporary HTTPS link for phone/browser testing.
+
+**Open directly in Colab:**
+
+https://colab.research.google.com/github/rampaulsaini/yatharth-music-ai/blob/main/colab/Yatharth_Music_AI_Free_GPU.ipynb
+
+The notebook uses a temporary Cloudflare Tunnel link. No Hugging Face account is required for this development/test route. The link and GPU runtime stop when the Colab runtime stops, so this is not permanent hosting.
+
 ## Local development
 
 Python 3.11+ is recommended.
@@ -78,6 +88,10 @@ Or:
 ```bash
 docker compose up --build
 ```
+
+## Hugging Face deployment
+
+The Hugging Face Space sync workflow remains in the repository, but it is now **manual-only** so an invalid/missing Hugging Face credential cannot break normal GitHub development. To use it, create a Hugging Face Space and configure the GitHub repository secret `HF_TOKEN` plus the optional `HF_SPACE_REPO` repository variable, then run the workflow manually from GitHub Actions.
 
 ## Production requirements
 
