@@ -1,11 +1,8 @@
 name: Sync Hugging Face Space
 
+# Hugging Face deployment is intentionally manual. The free Colab path is the
+# primary zero-cost development/test path and does not require a Hugging Face account.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "hf_space/**"
-      - ".github/workflows/sync-huggingface-space.yml"
   workflow_dispatch:
 
 permissions:
