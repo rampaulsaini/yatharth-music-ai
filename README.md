@@ -20,6 +20,10 @@ Original, mobile-first AI music creation app powered by FastAPI and ACE-Step.
 - Docker deployment
 - GitHub Actions smoke CI
 
+## Final launch checklist
+
+Use [`LAUNCH_CHECKLIST.md`](./LAUNCH_CHECKLIST.md) as the canonical final checklist. It distinguishes the repository work from account-owned deployment steps and gives the exact free mobile validation milestone.
+
 ## Free AI testing — Google Colab
 
 The repository includes a ready-to-run free GPU notebook that starts **ACE-Step 1.5 + the Yatharth backend** and creates a temporary HTTPS link for phone/browser testing.
