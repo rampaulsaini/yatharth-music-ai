@@ -1,46 +1,36 @@
----
-title: Yatharth Music AI
-description: Mobile-first AI music creation adapter for Yatharth Music AI
-emoji: 🎵
-colorFrom: indigo
-colorTo: purple
-sdk: gradio
-app_file: app.py
-python_version: "3.12.12"
-startup_duration_timeout: 30m
----
+# Yatharth Music AI — Free Hugging Face Route
 
-# Yatharth Music AI — Hugging Face adapter
-
-This Space provides a lightweight Gradio interface for the Yatharth Music AI API.
+This Space is the free-first public adapter for Yatharth Music AI.
 
 ## Architecture
 
-`Hugging Face Gradio Space → Yatharth API → ACE-Step / configured music engine`
+```text
+Phone browser
+  -> Hugging Face Gradio Space
+  -> Yatharth API
+  -> ACE-Step 1.5
+  -> generated audio
+```
 
-The adapter is intentionally thin: the Space UI does **not** contain the production music model or API credentials. Generation is performed by the configured Yatharth API and its configured engine.
+The adapter intentionally does not contain production credentials or model weights. Configure `YATHARTH_API_BASE_URL` (and optional `YATHARTH_API_TOKEN`) in the Space settings.
 
-## Space configuration
+## Free-use expectation
 
-Set these Space secrets/environment variables:
+Hugging Face ZeroGPU is shared and quota-limited. It is suitable for testing, demos, and early validation; it is not a promise of unlimited 24/7 production GPU compute.
 
-- `YATHARTH_API_BASE_URL` — required URL of the deployed Yatharth API.
-- `YATHARTH_API_TOKEN` — optional bearer token if the API is protected.
-- `YATHARTH_POLL_SECONDS` — optional polling interval; default `2`.
-- `YATHARTH_POLL_TIMEOUT_SECONDS` — optional timeout; default `300`.
+For the zero-budget phase, keep generation durations modest (for example 30–60 seconds) while validating the complete real-AI path. Move to dedicated/cloud GPU infrastructure only after usage justifies it.
 
-## ZeroGPU note
+## Deployment checklist
 
-ZeroGPU is useful when a Space itself runs GPU-bound model code through `@spaces.GPU`. This adapter does not do that yet because generation remains in the Yatharth backend. Selecting ZeroGPU for this thin adapter therefore does not move ACE-Step generation onto the Space GPU. A future native ZeroGPU engine can be added as a separate backend without changing the public UI contract.
+1. Create a Gradio Space with ZeroGPU hardware.
+2. Sync the `hf_space/` directory from the main repository.
+3. Set `YATHARTH_API_BASE_URL` to a reachable Yatharth API.
+4. If the API is protected, set `YATHARTH_API_TOKEN` as a Space secret.
+5. Confirm the API reports `DEMO_MODE=false` and `engine_reachable=true` before testing real generation.
+6. Test a 30-second song first, then 60 seconds.
 
-## Deployment
+## Important architecture note
 
-Create a **Gradio Space** and select **ZeroGPU** only if you want to reserve this Space for a future GPU-backed implementation. The current adapter can run on CPU because it calls the Yatharth API remotely.
+The current adapter calls the Yatharth API; ZeroGPU therefore does not magically provide compute to an API hosted somewhere else. For a genuinely free end-to-end ZeroGPU deployment, the ACE-Step inference engine must eventually run inside the ZeroGPU Space (or another free GPU runtime) rather than on a separate paid/private server.
 
-The GitHub repository includes an optional GitHub Actions sync workflow. Set the repository variable `HF_SPACE_REPO` to your Hugging Face Space ID (for example, `username/yatharth-music-ai`) and the repository secret `HF_TOKEN` to a Hugging Face token with permission to write to that Space. Never commit either value to source code.
-
-After the Space starts, set `YATHARTH_API_BASE_URL` in the Space settings and test the Generate Music button.
-
-## Current limitation
-
-This Space is a public/demo adapter, not an unlimited free GPU service. Hugging Face ZeroGPU uses shared GPU capacity and daily quotas; those limits apply when GPU-backed functions are actually used.
+This separation is intentional so the public UI and compute backend can be changed independently without redesigning the Yatharth API contract.
