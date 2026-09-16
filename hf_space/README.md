@@ -11,44 +11,57 @@ hardware: zero-gpu
 
 # Yatharth Music AI — Free ACE-Step 1.5 ZeroGPU
 
-This Space is now an **end-to-end free-first demo**. The public Gradio UI runs ACE-Step 1.5 directly inside Hugging Face ZeroGPU, so it does not require a separate Yatharth API or paid GPU server for this route.
+This Space is the free-first public music generator for Yatharth Music AI.
+It runs the official **ACE-Step 1.5 XL Turbo Diffusers** pipeline directly on
+Hugging Face ZeroGPU, so this route does not require a separate Yatharth API
+or paid GPU server.
 
 ## Architecture
 
 ```text
 Phone browser
   -> Hugging Face Gradio Space (ZeroGPU)
-  -> ACE-Step 1.5
+  -> ACE-Step 1.5 XL Turbo
   -> generated WAV audio
 ```
 
-## Free-use expectation
+## Current free-first limits
 
-Hugging Face ZeroGPU is shared and quota-limited. Free accounts currently receive a limited daily GPU allowance, so this Space intentionally starts with **10–60 second** generations and a 30-second default. It is suitable for testing, demos, and early validation, not unlimited 24/7 production compute.
+- Generation length: 10–60 seconds.
+- Default: 30 seconds.
+- Languages exposed in the UI: Hindi, Punjabi, English, Sanskrit, Urdu, Bengali.
+- Optional lyrics, genre, mood, vocal style and instrumental mode.
+- ZeroGPU is shared and quota-limited; this is for validation, demos and early users,
+  not unlimited 24/7 production hosting.
 
-## What is implemented
+## Deployment
 
-- ACE-Step 1.5 turbo model loaded from Hugging Face.
-- Direct text-to-music generation with optional lyrics.
-- Hindi, Punjabi, English, Sanskrit, Urdu and Bengali language choices.
-- Genre, mood, vocal style and instrumental controls.
-- ZeroGPU `@spaces.GPU` execution.
-- WAV output directly in the browser.
-- No Yatharth API secret required for this free-first Space.
+1. Create a **public Gradio Space** named `yatharth-music-ai` under the Hugging Face account.
+2. Select **ZeroGPU** hardware.
+3. Copy/sync the contents of this `hf_space/` directory into the Space repository.
+4. Wait for the Space to finish building and downloading the model.
+5. Open the Space from a phone browser.
+6. First test: Hindi + Cinematic + Emotional + 30 seconds.
 
-## Deployment checklist
+The repository also contains a GitHub Actions sync workflow. It requires a Hugging
+Face write token stored in GitHub as `HF_TOKEN` and the Space repository id in the
+`HF_SPACE_REPO` Actions variable. The workflow is intentionally manual so a token
+is never committed to source control.
 
-1. The Space must use **Gradio + ZeroGPU hardware**.
-2. Keep `hf_space/app.py`, `hf_space/requirements.txt` and this README synced into the Space repository.
-3. Wait for the Space build to finish; the first model download can take time because ACE-Step 1.5 is a multi-component model.
-4. Open the Space from a phone browser.
-5. Test a **30-second** generation first.
-6. If successful, test 60 seconds while watching the ZeroGPU quota.
+## Model
 
-## Important limitation
+The app uses `ACE-Step/acestep-v15-xl-turbo-diffusers`, the official Diffusers-format
+ACE-Step 1.5 XL Turbo checkpoint. Turbo uses 8 inference steps in the official
+Diffusers pipeline documentation.
 
-This is the free validation path. ZeroGPU is shared infrastructure with daily quotas and queueing. It cannot honestly be presented as unlimited free production hosting. When the project gets real users/revenue, the same UI can later be connected back to the Yatharth API and a dedicated GPU backend without redesigning the product.
+## After validation
 
-## Model / licensing note
+Keep this ZeroGPU Space as the zero-budget public/demo route. When usage or revenue
+justifies dedicated compute, the main Yatharth API can be connected to a dedicated
+GPU backend without changing the public product concept.
 
-ACE-Step 1.5 is published under the MIT license, and its model card states that generated music is intended for commercial use. Review the current model and Hugging Face terms before launching a paid service.
+## Licensing
+
+The ACE-Step model checkpoint is published under the MIT license. Review the current
+model card, Hugging Face terms, and any applicable third-party rights before offering
+paid music generation commercially.
