@@ -1,24 +1,52 @@
-"""Hugging Face Gradio adapter for Yatharth Music AI.
+"""Yatharth Music AI - free-first ACE-Step 1.5 ZeroGPU Space.
 
-This Space is intentionally a thin public/demo adapter. Real generation is
-performed by the configured Yatharth Music AI API, so secrets and production
-engine credentials never need to be committed to the repository.
+The Space runs ACE-Step 1.5 directly on Hugging Face ZeroGPU. No external
+Yatharth API or paid GPU server is required for this demo path.
 """
 
 import os
-import time
-from typing import Any
+import tempfile
 
+import spaces
 import gradio as gr
+import soundfile as sf
+import torch
+from diffusers import AceStepPipeline
 
-from bridge import YatharthAPIError, YatharthBridge
+MODEL_ID = os.getenv("ACE_STEP_MODEL", "ACE-Step/Ace-Step1.5")
 
-API_BASE_URL = os.getenv("YATHARTH_API_BASE_URL", "").strip().rstrip("/")
-API_TOKEN = os.getenv("YATHARTH_API_TOKEN", "").strip()
-POLL_SECONDS = max(0.5, float(os.getenv("YATHARTH_POLL_SECONDS", "2")))
-POLL_TIMEOUT = max(30, int(os.getenv("YATHARTH_POLL_TIMEOUT_SECONDS", "300")))
+# Hugging Face ZeroGPU provides a CUDA emulation layer during startup, so the
+# model can be placed on CUDA at module load as recommended by ZeroGPU docs.
+print(f"Loading {MODEL_ID}...")
+pipe = AceStepPipeline.from_pretrained(
+    MODEL_ID,
+    torch_dtype=torch.bfloat16,
+)
+pipe = pipe.to("cuda")
+print("ACE-Step 1.5 pipeline ready.")
+
+LANGUAGE_CODES = {
+    "Hindi": "hi",
+    "Punjabi": "pa",
+    "English": "en",
+    "Sanskrit": "sa",
+    "Urdu": "ur",
+    "Bengali": "bn",
+}
 
 
+def _build_prompt(prompt: str, genre: str, mood: str, voice: str) -> str:
+    parts = [prompt.strip() or "cinematic melodic song"]
+    if genre:
+        parts.append(f"genre: {genre}")
+    if mood:
+        parts.append(f"mood: {mood}")
+    if voice and voice != "Instrumental":
+        parts.append(f"vocal style: {voice}")
+    return ", ".join(parts)
+
+
+@spaces.GPU(duration=120)
 def generate_music(
     prompt: str,
     lyrics: str,
@@ -29,63 +57,84 @@ def generate_music(
     duration: int,
     instrumental: bool,
 ) -> tuple[str | None, str]:
-    """Generate music through the configured Yatharth Music AI API bridge."""
-    if not API_BASE_URL:
-        return None, (
-            "YATHARTH_API_BASE_URL is not configured. "
-            "Set it in the Space secrets/environment before generating."
-        )
+    """Generate one short song directly with ACE-Step on ZeroGPU."""
+    duration = max(10, min(int(duration), 60))
+    lyrics = (lyrics or "").strip()
+    if instrumental:
+        lyrics = ""
 
-    bridge = YatharthBridge(API_BASE_URL, token=API_TOKEN, timeout=90)
+    if voice == "Instrumental":
+        instrumental = True
+        lyrics = ""
+
     try:
-        created = bridge.generate(
-            prompt=prompt,
+        result = pipe(
+            prompt=_build_prompt(prompt, genre, mood, voice),
             lyrics=lyrics,
-            language=language,
-            genre=genre,
-            mood=mood,
-            voice=voice,
-            duration=int(duration),
-            instrumental=instrumental,
+            audio_duration=float(duration),
+            vocal_language=LANGUAGE_CODES.get(language, "en"),
+            num_inference_steps=8,
+            output_type="pt",
         )
-        task_id = str(created["task_id"])
-        deadline = time.monotonic() + POLL_TIMEOUT
-        last: dict[str, Any] = created
 
-        while time.monotonic() < deadline:
-            last = bridge.task(task_id)
-            status = last.get("status")
-            if status == "completed":
-                audio_url = last.get("audio_url")
-                if not audio_url:
-                    return None, "Generation completed but no audio URL was returned."
-                return bridge.absolute_url(str(audio_url)), "Generation complete."
-            if status == "failed":
-                return None, f"Generation failed: {last.get('error') or 'unknown error'}"
-            time.sleep(POLL_SECONDS)
+        audio = result.audios[0].detach().float().cpu().numpy()
+        # ACE-Step returns [channels, samples]. soundfile expects
+        # [samples, channels] for stereo audio.
+        if audio.ndim == 2:
+            audio = audio.T
 
-        return None, f"Generation timed out. Task: {task_id}"
-    except YatharthAPIError as exc:
-        return None, f"Yatharth API error: {exc}"
+        output_path = os.path.join(tempfile.gettempdir(), "yatharth_music.wav")
+        sf.write(output_path, audio, 48000)
+        return output_path, f"Generation complete — {duration}s ACE-Step 1.5 music."
     except Exception as exc:
-        return None, f"Unexpected adapter error: {exc}"
+        return None, f"Generation failed: {type(exc).__name__}: {exc}"
 
 
 def build_demo() -> gr.Blocks:
     with gr.Blocks(title="Yatharth Music AI") as demo:
         gr.Markdown(
             "# 🎵 Yatharth Music AI\n"
-            "Create original music in Hindi, Punjabi, English and more."
+            "### Free ACE-Step 1.5 music generation on Hugging Face ZeroGPU\n"
+            "Short generations are enabled first so the free quota lasts longer."
         )
         with gr.Row():
             with gr.Column():
-                prompt = gr.Textbox(label="Music prompt", placeholder="cinematic love song, warm piano, modern drums")
-                lyrics = gr.Textbox(label="Lyrics (optional)", lines=6)
-                language = gr.Dropdown(["Hindi", "Punjabi", "English", "Sanskrit", "Urdu", "Bengali"], value="Hindi", label="Language")
-                genre = gr.Dropdown(["Cinematic", "Pop", "Folk", "Rock", "Lo-fi", "Classical", "Electronic"], value="Cinematic", label="Genre")
-                mood = gr.Dropdown(["Emotional", "Uplifting", "Peaceful", "Energetic", "Romantic", "Epic"], value="Emotional", label="Mood")
-                voice = gr.Dropdown(["Male", "Female", "Duet", "Instrumental"], value="Male", label="Voice")
-                duration = gr.Slider(10, 300, value=60, step=1, label="Duration (seconds)")
+                prompt = gr.Textbox(
+                    label="Music prompt",
+                    placeholder="cinematic Hindi love song, warm piano, modern drums",
+                )
+                lyrics = gr.Textbox(
+                    label="Lyrics (optional)",
+                    lines=7,
+                    placeholder="[verse]\n...\n[chorus]\n...",
+                )
+                language = gr.Dropdown(
+                    list(LANGUAGE_CODES),
+                    value="Hindi",
+                    label="Language",
+                )
+                genre = gr.Dropdown(
+                    ["Cinematic", "Pop", "Folk", "Rock", "Lo-fi", "Classical", "Electronic"],
+                    value="Cinematic",
+                    label="Genre",
+                )
+                mood = gr.Dropdown(
+                    ["Emotional", "Uplifting", "Peaceful", "Energetic", "Romantic", "Epic"],
+                    value="Emotional",
+                    label="Mood",
+                )
+                voice = gr.Dropdown(
+                    ["Male", "Female", "Duet", "Instrumental"],
+                    value="Male",
+                    label="Voice",
+                )
+                duration = gr.Slider(
+                    10,
+                    60,
+                    value=30,
+                    step=5,
+                    label="Duration (seconds)",
+                )
                 instrumental = gr.Checkbox(label="Instrumental", value=False)
                 button = gr.Button("Generate Music", variant="primary")
             with gr.Column():
@@ -98,8 +147,8 @@ def build_demo() -> gr.Blocks:
             outputs=[audio, status],
         )
         gr.Markdown(
-            "**Demo note:** availability depends on the configured Yatharth API and its AI engine. "
-            "Hugging Face ZeroGPU has daily usage quotas; it is not unlimited production compute."
+            "**Free-use note:** ZeroGPU is shared and quota-limited. The current free-first "
+            "demo intentionally limits each generation to 60 seconds."
         )
     return demo
 
