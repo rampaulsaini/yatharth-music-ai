@@ -4,11 +4,11 @@ This checklist separates what is already in the repository from the two things t
 
 ## 1. Free mobile AI test — recommended first launch
 
-1. Open the repository's Colab notebook:
-   https://colab.research.google.com/github/rampaulsaini/yatharth-music-ai/blob/main/colab/Yatharth_Music_AI_Free_GPU.ipynb
+1. Open the robust real-AI Colab notebook:
+   https://colab.research.google.com/github/rampaulsaini/yatharth-music-ai/blob/main/colab/Yatharth_Music_AI_Free_GPU_v2.ipynb
 2. In Colab, select a GPU runtime when one is available.
 3. Run the cells from top to bottom.
-4. Wait for the ACE-Step health check to succeed.
+4. Wait for the ACE-Step health check to succeed. The v2 notebook waits up to 3 minutes and prints the ACE-Step log if startup fails.
 5. Wait for the Yatharth health check to report `demo_mode: false` and `engine_reachable: true`.
 6. Open the printed `YATHARTH PUBLIC LINK` on the phone.
 7. Generate a short 10–30 second song first.
