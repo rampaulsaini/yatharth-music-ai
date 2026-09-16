@@ -1,36 +1,54 @@
-# Yatharth Music AI — Free Hugging Face Route
+---
+title: Yatharth Music AI
+emoji: 🎵
+colorFrom: indigo
+colorTo: purple
+sdk: gradio
+python_version: "3.12.12"
+app_file: app.py
+hardware: zero-gpu
+---
 
-This Space is the free-first public adapter for Yatharth Music AI.
+# Yatharth Music AI — Free ACE-Step 1.5 ZeroGPU
+
+This Space is now an **end-to-end free-first demo**. The public Gradio UI runs ACE-Step 1.5 directly inside Hugging Face ZeroGPU, so it does not require a separate Yatharth API or paid GPU server for this route.
 
 ## Architecture
 
 ```text
 Phone browser
-  -> Hugging Face Gradio Space
-  -> Yatharth API
+  -> Hugging Face Gradio Space (ZeroGPU)
   -> ACE-Step 1.5
-  -> generated audio
+  -> generated WAV audio
 ```
-
-The adapter intentionally does not contain production credentials or model weights. Configure `YATHARTH_API_BASE_URL` (and optional `YATHARTH_API_TOKEN`) in the Space settings.
 
 ## Free-use expectation
 
-Hugging Face ZeroGPU is shared and quota-limited. It is suitable for testing, demos, and early validation; it is not a promise of unlimited 24/7 production GPU compute.
+Hugging Face ZeroGPU is shared and quota-limited. Free accounts currently receive a limited daily GPU allowance, so this Space intentionally starts with **10–60 second** generations and a 30-second default. It is suitable for testing, demos, and early validation, not unlimited 24/7 production compute.
 
-For the zero-budget phase, keep generation durations modest (for example 30–60 seconds) while validating the complete real-AI path. Move to dedicated/cloud GPU infrastructure only after usage justifies it.
+## What is implemented
+
+- ACE-Step 1.5 turbo model loaded from Hugging Face.
+- Direct text-to-music generation with optional lyrics.
+- Hindi, Punjabi, English, Sanskrit, Urdu and Bengali language choices.
+- Genre, mood, vocal style and instrumental controls.
+- ZeroGPU `@spaces.GPU` execution.
+- WAV output directly in the browser.
+- No Yatharth API secret required for this free-first Space.
 
 ## Deployment checklist
 
-1. Create a Gradio Space with ZeroGPU hardware.
-2. Sync the `hf_space/` directory from the main repository.
-3. Set `YATHARTH_API_BASE_URL` to a reachable Yatharth API.
-4. If the API is protected, set `YATHARTH_API_TOKEN` as a Space secret.
-5. Confirm the API reports `DEMO_MODE=false` and `engine_reachable=true` before testing real generation.
-6. Test a 30-second song first, then 60 seconds.
+1. The Space must use **Gradio + ZeroGPU hardware**.
+2. Keep `hf_space/app.py`, `hf_space/requirements.txt` and this README synced into the Space repository.
+3. Wait for the Space build to finish; the first model download can take time because ACE-Step 1.5 is a multi-component model.
+4. Open the Space from a phone browser.
+5. Test a **30-second** generation first.
+6. If successful, test 60 seconds while watching the ZeroGPU quota.
 
-## Important architecture note
+## Important limitation
 
-The current adapter calls the Yatharth API; ZeroGPU therefore does not magically provide compute to an API hosted somewhere else. For a genuinely free end-to-end ZeroGPU deployment, the ACE-Step inference engine must eventually run inside the ZeroGPU Space (or another free GPU runtime) rather than on a separate paid/private server.
+This is the free validation path. ZeroGPU is shared infrastructure with daily quotas and queueing. It cannot honestly be presented as unlimited free production hosting. When the project gets real users/revenue, the same UI can later be connected back to the Yatharth API and a dedicated GPU backend without redesigning the product.
 
-This separation is intentional so the public UI and compute backend can be changed independently without redesigning the Yatharth API contract.
+## Model / licensing note
+
+ACE-Step 1.5 is published under the MIT license, and its model card states that generated music is intended for commercial use. Review the current model and Hugging Face terms before launching a paid service.
