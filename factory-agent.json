@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "repo": "rampaulsaini/yatharth-music-ai",
+  "role": "music-ai",
+  "description": "Music AI worker: inventory engine/config/tests and emit a generation-readiness manifest without requiring paid APIs.",
+  "mode": "free-first",
+  "ai_provider": "optional",
+  "policy": {
+    "no_paid_api_required": true,
+    "do_not_execute_untrusted_code": true,
+    "research_label": "draft",
+    "no_scientific_validation_claims": true
+  }
+}
