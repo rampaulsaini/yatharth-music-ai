@@ -1,0 +1,26 @@
+name: Specialist Agent — music-ai
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "factory-agent.json"
+      - "factory-agent.py"
+      - "factory/**"
+      - ".github/workflows/factory-agent.yml"
+  schedule:
+    - cron: "23 2 * * 1"
+permissions:
+  contents: read
+jobs:
+  agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run specialist agent
+        run: python3 factory-agent.py
+      - name: Publish agent manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: specialist-agent-manifest
+          path: agent-output/manifest.json
+          if-no-files-found: error
