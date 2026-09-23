@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "studio": "Yatharth Creative Studio",
+  "mode": "free-first-orchestration",
+  "goal": "Coordinate music, story, character, storyboard, animation and film-editing stages through specialist agents.",
+  "music_engine": "Yatharth Music AI / ACE-Step adapter",
+  "agents": [
+    {"id":"story-architect","role":"story","input":["creative_brief"],"output":["logline","script","dialogue"]},
+    {"id":"character-director","role":"characters","input":["script"],"output":["character_bible","asset_prompts"]},
+    {"id":"storyboard-agent","role":"storyboard","input":["script","character_bible"],"output":["scene_list","shot_list","camera_plan"]},
+    {"id":"music-agent","role":"music","input":["brief","lyrics","scene_timing"],"output":["song","score","cue_sheet"]},
+    {"id":"animation-planner","role":"animation","input":["scene_list","shot_list","asset_prompts"],"output":["animation_plan","timing_sheet"]},
+    {"id":"film-editor","role":"editing","input":["animation_plan","song","cue_sheet"],"output":["edit_plan","delivery_manifest"]},
+    {"id":"qc-agent","role":"quality","input":["all_outputs"],"output":["qc_report"]}
+  ],
+  "policy": {
+    "no_secret_exposure": true,
+    "no_fabricated_rendering_claims": true,
+    "human_review_before_publication": true,
+    "provider_neutral_adapters": true
+  }
+}
