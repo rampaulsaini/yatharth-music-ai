@@ -429,3 +429,44 @@ async def studio_plan(request: StudioPlanRequest, http_request: Request):
         render_available=not DEMO_MODE,
         music_engine="Yatharth Music AI / ACE-Step adapter"
     )
+
+
+@app.get("/api/studio/status")
+async def studio_status():
+    return {
+        "ok": True,
+        "studio": "Yatharth Creative Studio",
+        "mode": "free-first-orchestration",
+        "agents": ["story-architect", "character-director", "storyboard-agent", "music-agent", "animation-planner", "film-editor", "qc-agent"],
+        "pipeline": ["IDEA", "STORY", "CHARACTERS", "STORYBOARD", "MUSIC", "ANIMATION", "EDITING", "QC", "HUMAN_REVIEW"],
+        "render_available": not DEMO_MODE,
+        "music_engine": "Yatharth Music AI / ACE-Step adapter",
+        "publication_requires_human_review": True,
+    }
+
+
+@app.post("/api/studio/manifest")
+async def studio_manifest(request: StudioPlanRequest, http_request: Request):
+    enforce_rate_limit(http_request)
+    idea = request.idea.strip()
+    styles = [str(s).strip() for s in request.styles if str(s).strip()][:8]
+    counts = _studio_counts(idea, styles)
+    plan_id = str(uuid.uuid4())
+    return {
+        "schema_version": 1,
+        "plan_id": plan_id,
+        "status": "REVIEW_REQUIRED",
+        "project": {"title": _studio_title(idea), "brief": idea, "language": request.language, "format": request.format, "styles": styles},
+        "counts": counts,
+        "pipeline": [
+            {"stage": "story", "agent": "story-architect", "status": "PLANNED"},
+            {"stage": "characters", "agent": "character-director", "status": "PLANNED"},
+            {"stage": "storyboard", "agent": "storyboard-agent", "status": "PLANNED"},
+            {"stage": "music", "agent": "music-agent", "status": "PLANNED"},
+            {"stage": "animation", "agent": "animation-planner", "status": "PLANNED"},
+            {"stage": "editing", "agent": "film-editor", "status": "PLANNED"},
+            {"stage": "qc", "agent": "qc-agent", "status": "REVIEW_REQUIRED"},
+        ],
+        "artifacts": ["story.json", "character-bible.json", "storyboard.json", "music-cues.json", "animation-plan.json", "edit-plan.json", "qc-report.json"],
+        "policy": {"no_secret_exposure": True, "no_fabricated_rendering_claims": True, "human_review_before_publication": True},
+    }
