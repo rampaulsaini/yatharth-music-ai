@@ -25,7 +25,7 @@ assert 'id="runProduction"' in html
 assert 'id="productionRun"' in html
 assert 'id="downloadManifest"' in html
 
-assert '/api/studio/runs/'+encodeURIComponent(activeRunId)+'/artifacts/' in studio
+assert 'encodeURIComponent(activeRunId)+\"/artifacts/\"' in studio
 assert "function viewArtifact" in studio
 assert "function downloadArtifact" in studio
 assert "artifact-open" in studio
