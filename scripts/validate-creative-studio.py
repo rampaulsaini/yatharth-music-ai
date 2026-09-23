@@ -8,7 +8,7 @@ main = (ROOT / "main.py").read_text(encoding="utf-8")
 studio = (ROOT / "studio.js").read_text(encoding="utf-8")
 
 required_agents = {a["id"] for a in manifest["agents"]}
-required_contracts = ["/api/studio/plan", "/api/studio/status", "/api/studio/manifest", "/api/studio/run", "/api/studio/runs/{run_id}", "/api/studio/runs/{run_id}/manifest", "/api/studio/runs/{run_id}/artifacts/{artifact_name}", "StudioPlanRequest", "StudioPlanResponse"]
+required_contracts = ["/api/studio/plan", "/api/studio/status", "/api/studio/manifest", "/api/studio/run", "/api/studio/runs/{run_id}", "/api/studio/runs/{run_id}/manifest", "/api/studio/runs/{run_id}/artifacts/{artifact_name}", "/api/studio/runs/{run_id}/music-task", "StudioPlanRequest", "StudioPlanResponse"]
 assert manifest["schema_version"] == 1
 assert manifest["policy"]["no_secret_exposure"] is True
 assert manifest["policy"]["no_fabricated_rendering_claims"] is True
@@ -31,3 +31,7 @@ assert "function downloadArtifact" in studio
 assert "stages/{stage}/execute" in main
 assert "artifact-open" in studio
 print("creative-studio artifact contract validation: PASS")
+
+assert "lyrics=request.lyrics" in main
+assert '"client_id": client_id(http_request)' in main
+assert 'fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)+"/music-task"' in studio
