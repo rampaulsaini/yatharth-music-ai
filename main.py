@@ -360,3 +360,72 @@ async def home():
 
 for asset in ("app.js", "style.css", "manifest.json"):
     app.get(f"/{asset}")(lambda asset=asset: FileResponse(ROOT / asset))
+
+
+class StudioPlanRequest(BaseModel):
+    idea: str = Field(min_length=1, max_length=12000)
+    language: str = Field(default="Hindi", max_length=40)
+    format: str = Field(default="Animated Short", max_length=80)
+    styles: list[str] = Field(default_factory=list, max_length=8)
+    lyrics: str = Field(default="", max_length=8000)
+
+class StudioAgentResult(BaseModel):
+    id: str
+    role: str
+    status: str
+    outputs: list[str]
+    note: str
+
+class StudioPlanResponse(BaseModel):
+    plan_id: str
+    status: str
+    title: str
+    brief: str
+    language: str
+    format: str
+    styles: list[str]
+    counts: dict[str, int]
+    agents: list[StudioAgentResult]
+    review_required: bool
+    render_available: bool
+    music_engine: str
+
+def _studio_title(idea: str) -> str:
+    title = idea.split(".", 1)[0].split("।", 1)[0].strip()
+    return (title[:64] or "Untitled Production").strip()
+
+def _studio_counts(idea: str, styles: list[str]) -> dict[str, int]:
+    scenes = max(4, min(30, math.ceil(len(idea) / 45)))
+    characters = 3 if "Kids & Family" in styles else 2
+    shots = scenes * 4
+    return {"scenes": scenes, "characters": characters, "shots": shots, "music": 1}
+
+@app.post("/api/studio/plan", response_model=StudioPlanResponse)
+async def studio_plan(request: StudioPlanRequest, http_request: Request):
+    enforce_rate_limit(http_request)
+    idea = request.idea.strip()
+    styles = [str(s).strip() for s in request.styles if str(s).strip()][:8]
+    counts = _studio_counts(idea, styles)
+    agents = [
+        StudioAgentResult(id="story-architect", role="story", status="PLANNED", outputs=["logline", "script", "dialogue"], note="Structured story planning prepared."),
+        StudioAgentResult(id="character-director", role="characters", status="PLANNED", outputs=["character_bible", "asset_prompts"], note="Character continuity contract prepared."),
+        StudioAgentResult(id="storyboard-agent", role="storyboard", status="PLANNED", outputs=["scene_list", "shot_list", "camera_plan"], note="Storyboard and camera hand-off prepared."),
+        StudioAgentResult(id="music-agent", role="music", status="PLANNED", outputs=["song", "score", "cue_sheet"], note="Music hand-off prepared; actual generation uses the configured music engine."),
+        StudioAgentResult(id="animation-planner", role="animation", status="PLANNED", outputs=["animation_plan", "timing_sheet"], note="Animation production plan prepared; no rendering is claimed."),
+        StudioAgentResult(id="film-editor", role="editing", status="PLANNED", outputs=["edit_plan", "delivery_manifest"], note="Editorial delivery contract prepared."),
+        StudioAgentResult(id="qc-agent", role="quality", status="REVIEW_REQUIRED", outputs=["qc_report"], note="Human review remains required before publication.")
+    ]
+    return StudioPlanResponse(
+        plan_id=str(uuid.uuid4()),
+        status="REVIEW_REQUIRED",
+        title=_studio_title(idea),
+        brief=idea,
+        language=request.language,
+        format=request.format,
+        styles=styles,
+        counts=counts,
+        agents=agents,
+        review_required=True,
+        render_available=not DEMO_MODE,
+        music_engine="Yatharth Music AI / ACE-Step adapter"
+    )
