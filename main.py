@@ -8,6 +8,7 @@ import time
 import uuid
 import wave
 from collections import defaultdict, deque
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -537,6 +538,42 @@ async def studio_run_manifest(run_id: str):
     run = STUDIO_RUNS.get(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Production run not found")
+    return run
+
+
+@app.post("/api/studio/runs/{run_id}/stages/{stage}/execute")
+async def studio_execute_stage(run_id: str, stage: str):
+    """Execute one supported orchestration stage without fabricating external media."""
+    run = STUDIO_RUNS.get(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Production run not found")
+    stage = stage.strip().lower()
+    stage_map = {item["stage"]: item for item in run["stages"]}
+    if stage not in stage_map:
+        raise HTTPException(status_code=404, detail="Stage not found")
+    item = stage_map[stage]
+    ordered = [s["stage"] for s in run["stages"]]
+    index = ordered.index(stage)
+    if index > 0:
+        previous = stage_map[ordered[index - 1]]
+        if previous["status"] not in {"COMPLETED", "DONE"}:
+            raise HTTPException(status_code=409, detail=f"Previous stage '{ordered[index - 1]}' must be completed first")
+    if stage == "music" and not DEMO_MODE:
+        item["status"] = "READY"
+        item["note"] = "Music stage is ready for the configured ACE-Step adapter; use /api/generate for an actual audio task."
+    elif stage in {"animation", "editing"}:
+        item["status"] = "READY"
+        item["note"] = "Structured hand-off prepared. External rendering/assembly adapter is required."
+    elif stage == "qc":
+        item["status"] = "REVIEW_REQUIRED"
+        run["status"] = "REVIEW_REQUIRED"
+        item["note"] = "Human review is required before publication."
+    else:
+        item["status"] = "COMPLETED"
+        item["note"] = "Deterministic structured planning artifact generated; no external media generation claimed."
+    item["executed_at"] = datetime.now(timezone.utc).isoformat()
+    if stage != "qc" and all(s["status"] in {"COMPLETED", "READY", "DONE"} for s in run["stages"][:-1]):
+        run["status"] = "REVIEW_REQUIRED"
     return run
 
 
