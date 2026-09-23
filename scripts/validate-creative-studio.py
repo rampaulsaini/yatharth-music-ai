@@ -8,7 +8,7 @@ main = (ROOT / "main.py").read_text(encoding="utf-8")
 studio = (ROOT / "studio.js").read_text(encoding="utf-8")
 
 required_agents = {a["id"] for a in manifest["agents"]}
-required_contracts = ["/api/studio/plan", "StudioPlanRequest", "StudioPlanResponse"]
+required_contracts = ["/api/studio/plan", "/api/studio/status", "/api/studio/manifest", "StudioPlanRequest", "StudioPlanResponse"]
 assert manifest["schema_version"] == 1
 assert manifest["policy"]["no_secret_exposure"] is True
 assert manifest["policy"]["no_fabricated_rendering_claims"] is True
