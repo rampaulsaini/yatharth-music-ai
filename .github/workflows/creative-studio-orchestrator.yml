@@ -39,3 +39,10 @@ jobs:
           test -s studio.css
           test -s studio.js
           echo "Studio UI assets: READY"
+
+  creative-studio-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate creative studio contracts
+        run: python scripts/validate-creative-studio.py
