@@ -1,0 +1,41 @@
+name: Creative Studio — Automission Orchestrator
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "production-manifest.json"
+      - "studio.html"
+      - "studio.js"
+      - ".github/workflows/creative-studio-orchestrator.yml"
+  schedule:
+    - cron: "41 3 * * *"
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate production manifest
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path("production-manifest.json").read_text(encoding="utf-8"))
+          assert p["schema_version"] == 1
+          assert p["studio"] == "Yatharth Creative Studio"
+          assert len(p["agents"]) >= 6
+          assert all(a.get("id") and a.get("role") for a in p["agents"])
+          print("Creative Studio manifest: READY")
+          print("Agents:", ", ".join(a["id"] for a in p["agents"]))
+          PY
+      - name: Validate studio assets
+        run: |
+          test -s studio.html
+          test -s studio.css
+          test -s studio.js
+          echo "Studio UI assets: READY"
