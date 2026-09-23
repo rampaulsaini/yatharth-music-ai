@@ -86,7 +86,7 @@ async function startProduction(){
     $("planStatus").textContent="Backend unavailable — local plan remains available; no fabricated production run was created.";
   }finally{$("runProduction").disabled=false; $("runProduction").textContent="🚀 Start Automission Production"}
 }
-async async function executeStage(stage){
+async function executeStage(stage){
   if(!activeRunId)return;
   try{
     const r=await fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)+"/stages/"+encodeURIComponent(stage)+"/execute",{method:"POST"});
