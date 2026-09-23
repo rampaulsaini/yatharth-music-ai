@@ -28,5 +28,6 @@ assert 'id="downloadManifest"' in html
 assert 'encodeURIComponent(activeRunId)+\"/artifacts/\"' in studio
 assert "function viewArtifact" in studio
 assert "function downloadArtifact" in studio
+assert "stages/{stage}/execute" in main
 assert "artifact-open" in studio
 print("creative-studio artifact contract validation: PASS")
