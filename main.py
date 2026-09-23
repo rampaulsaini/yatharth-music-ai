@@ -424,6 +424,7 @@ async def studio_plan(request: StudioPlanRequest, http_request: Request):
         language=request.language,
         format=request.format,
         styles=styles,
+        lyrics=request.lyrics,
         counts=counts,
         agents=agents,
         review_required=True,
@@ -540,6 +541,40 @@ async def studio_run_manifest(run_id: str):
         raise HTTPException(status_code=404, detail="Production run not found")
     return run
 
+
+@app.post("/api/studio/runs/{run_id}/music-task")
+async def studio_music_task(run_id: str, http_request: Request):
+    cid = enforce_rate_limit(http_request)
+    run = STUDIO_RUNS.get(run_id)
+    if not run:
+        raise HTTPException(404, "studio run not found")
+    owner = run.get("client_id")
+    if owner and owner != cid:
+        raise HTTPException(403, "not allowed")
+    stages = {s["stage"]: s for s in run["stages"]}
+    if stages["storyboard"]["status"] not in {"COMPLETED", "READY", "DONE"}:
+        raise HTTPException(409, "complete storyboard stage before music hand-off")
+    existing = run.get("music_task_id")
+    if existing:
+        task = tasks.get(existing)
+        if task and task.client_id == cid:
+            return {"run_id": run_id, "task_id": existing, "status": task.status, "demo": DEMO_MODE, "reused": True}
+    project = run["project"]
+    music = GenerateRequest(prompt=project["brief"], lyrics=project.get("lyrics", ""), language=project["language"], genre="Cinematic", mood="Emotional", voice="Male", duration=60, format="mp3")
+    if not music.prompt.strip() and not music.lyrics.strip():
+        raise HTTPException(400, "studio project has no music prompt or lyrics")
+    prune_tasks()
+    task = Task(music, cid)
+    tasks[task.id] = task
+    run["music_task_id"] = task.id
+    run["stages"][3]["music_task_id"] = task.id
+    run["stages"][3]["status"] = "READY" if DEMO_MODE else "PROCESSING"
+    run["stages"][3]["note"] = "Music task linked to Yatharth Music AI generation pipeline." + (" Demo audio only." if DEMO_MODE else " Generation is running through the configured music engine.")
+    if DEMO_MODE:
+        task.status = "completed"; task.progress = 100; task.metadata = {"demo": True, "message": "Connect ACE-Step for real AI music."}; task.audio_url = f"/api/audio/{task.id}"
+    else:
+        asyncio.create_task(run_engine_task(task))
+    return {"run_id": run_id, "task_id": task.id, "status": task.status, "demo": DEMO_MODE, "reused": False}
 
 @app.post("/api/studio/runs/{run_id}/stages/{stage}/execute")
 async def studio_execute_stage(run_id: str, stage: str):
