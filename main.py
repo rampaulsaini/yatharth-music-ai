@@ -385,6 +385,7 @@ class StudioPlanResponse(BaseModel):
     language: str
     format: str
     styles: list[str]
+    lyrics: str = ""
     counts: dict[str, int]
     agents: list[StudioAgentResult]
     review_required: bool
@@ -498,7 +499,8 @@ async def studio_run(request: StudioPlanRequest, http_request: Request):
         "schema_version": 1,
         "run_id": run_id,
         "status": "REVIEW_REQUIRED",
-        "project": {"title": title, "brief": idea, "language": request.language, "format": request.format, "styles": [str(s).strip() for s in request.styles if str(s).strip()][:8]},
+        "project": {"title": title, "brief": idea, "language": request.language, "format": request.format, "styles": [str(s).strip() for s in request.styles if str(s).strip()][:8], "lyrics": request.lyrics},
+        "client_id": client_id(http_request),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "render_available": not DEMO_MODE,
         "review_required": True,
