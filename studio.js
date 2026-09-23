@@ -64,7 +64,9 @@ function renderRun(data){
   $("runProgressText").textContent=ready+" / "+stages.length+" stages";
   $("runProgressBar").style.width=(stages.length?Math.round(ready/stages.length*100):0)+"%";
   $("stageList").innerHTML=stages.map((s,i)=>'<div class="run-stage"><span class="stage-num">'+String(i+1).padStart(2,"0")+'</span><div><b>'+esc(stageLabels[s.stage]||s.stage)+'</b><small>'+esc(s.agent||"agent")+'</small></div><i class="state-'+stageClass(s.status)+'">'+esc(s.status)+'</i></div>').join("");
-  $("artifactList").innerHTML=(data.artifacts||[]).map(a=>'<div class="artifact"><div><b>'+esc(a.name)+'</b><small>'+esc(a.type||"structured artifact")+'</small></div><span>'+esc(a.status||"PLANNED")+'</span></div>').join("")||'<div class="empty">No run artifacts yet.</div>';
+  $("artifactList").innerHTML=(data.artifacts||[]).map(a=>'<div class="artifact"><div><b>'+esc(a.name)+'</b><small>'+esc(a.type||"structured artifact")+'</small></div><div class="artifact-actions"><span>'+esc(a.status||"PLANNED")+'</span><button class="ghost artifact-open" data-artifact="'+encodeURIComponent(a.name)+'">View</button><button class="ghost artifact-download" data-artifact="'+encodeURIComponent(a.name)+'">JSON</button></div></div>').join("")||'<div class="empty">No run artifacts yet.</div>';
+  document.querySelectorAll(".artifact-open").forEach(b=>b.onclick=()=>viewArtifact(decodeURIComponent(b.dataset.artifact)));
+  document.querySelectorAll(".artifact-download").forEach(b=>b.onclick=()=>downloadArtifact(decodeURIComponent(b.dataset.artifact)));
   $("downloadManifest").disabled=!activeRunId; $("reviewGate").classList.toggle("attention",!!data.review_required);
 }
 async function startProduction(){
@@ -87,6 +89,28 @@ async function startProduction(){
 async function refreshRun(){
   if(!activeRunId)return;
   try{const r=await fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)); if(r.ok)renderRun(await r.json())}catch(e){}
+}
+async function fetchArtifact(name){
+  if(!activeRunId)return null;
+  const r=await fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)+"/artifacts/"+encodeURIComponent(name));
+  if(!r.ok)throw new Error("artifact unavailable");
+  return r.json();
+}
+async function viewArtifact(name){
+  try{
+    const data=await fetchArtifact(name);
+    const pretty=JSON.stringify(data.data||data,null,2);
+    $("planStatus").textContent=name+" loaded — structured planning artifact ready for review/export.";
+    $("canvasTitle").textContent=data.project?.title||name;
+    $("canvasText").textContent=pretty.slice(0,500)+(pretty.length>500?"…":"");
+  }catch(e){$("planStatus").textContent="Artifact could not be loaded from the current run."}
+}
+async function downloadArtifact(name){
+  try{
+    const data=await fetchArtifact(name);
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob),a=document.createElement("a"); a.href=url; a.download="yatharth-"+name; a.click(); URL.revokeObjectURL(url);
+  }catch(e){$("planStatus").textContent="Artifact download unavailable."}
 }
 async function exportManifest(){
   if(!activeRunId)return;
