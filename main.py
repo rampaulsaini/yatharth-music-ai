@@ -496,7 +496,7 @@ async def studio_run(request: StudioPlanRequest, http_request: Request):
         "schema_version": 1,
         "run_id": run_id,
         "status": "REVIEW_REQUIRED",
-        "project": {"title": title, "brief": idea, "language": request.language, "format": request.format},
+        "project": {"title": title, "brief": idea, "language": request.language, "format": request.format, "styles": [str(s).strip() for s in request.styles if str(s).strip()][:8]},
         "created_at": datetime.now(timezone.utc).isoformat(),
         "render_available": not DEMO_MODE,
         "review_required": True,
@@ -551,7 +551,7 @@ async def studio_run_artifact(run_id: str, artifact_name: str):
     if safe_name not in allowed:
         raise HTTPException(status_code=404, detail="Artifact not found")
     project = run["project"]
-    counts = _studio_counts(project["brief"], [])
+    counts = _studio_counts(project["brief"], project.get("styles", []))
     stage_by_name = {stage["stage"]: stage for stage in run["stages"]}
     if safe_name == "production-manifest.json":
         return run
