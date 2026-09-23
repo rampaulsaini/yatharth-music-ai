@@ -63,10 +63,10 @@ function renderRun(data){
   const stages=data.stages||[], ready=stages.filter(s=>["READY","COMPLETED","DONE"].includes(s.status)).length;
   $("runProgressText").textContent=ready+" / "+stages.length+" stages";
   $("runProgressBar").style.width=(stages.length?Math.round(ready/stages.length*100):0)+"%";
-  $("stageList").innerHTML=stages.map((s,i)=>'<div class="run-stage"><span class="stage-num">'+String(i+1).padStart(2,"0")+'</span><div><b>'+esc(stageLabels[s.stage]||s.stage)+'</b><small>'+esc(s.agent||"agent")+'</small></div><i class="state-'+stageClass(s.status)+'">'+esc(s.status)+'</i></div>').join("");
+  $("stageList").innerHTML=stages.map((s,i)=>'<div class="run-stage"><span class="stage-num">'+String(i+1).padStart(2,"0")+'</span><div><b>'+esc(stageLabels[s.stage]||s.stage)+'</b><small>'+esc(s.agent||"agent")+'</small></div><i class="state-'+stageClass(s.status)+'">'+esc(s.status)+'</i>'+((s.status==="PLANNED")?'<button class="ghost stage-execute" data-stage="'+esc(s.stage)+'">Execute</button>':'')+'</div>').join("");
   $("artifactList").innerHTML=(data.artifacts||[]).map(a=>'<div class="artifact"><div><b>'+esc(a.name)+'</b><small>'+esc(a.type||"structured artifact")+'</small></div><div class="artifact-actions"><span>'+esc(a.status||"PLANNED")+'</span><button class="ghost artifact-open" data-artifact="'+encodeURIComponent(a.name)+'">View</button><button class="ghost artifact-download" data-artifact="'+encodeURIComponent(a.name)+'">JSON</button></div></div>').join("")||'<div class="empty">No run artifacts yet.</div>';
   document.querySelectorAll(".artifact-open").forEach(b=>b.onclick=()=>viewArtifact(decodeURIComponent(b.dataset.artifact)));
-  document.querySelectorAll(".artifact-download").forEach(b=>b.onclick=()=>downloadArtifact(decodeURIComponent(b.dataset.artifact)));
+  document.querySelectorAll(".artifact-download").forEach(b=>b.onclick=()=>downloadArtifact(decodeURIComponent(b.dataset.artifact))); document.querySelectorAll(".stage-execute").forEach(b=>b.onclick=()=>executeStage(b.dataset.stage));
   $("downloadManifest").disabled=!activeRunId; $("reviewGate").classList.toggle("attention",!!data.review_required);
 }
 async function startProduction(){
@@ -86,7 +86,17 @@ async function startProduction(){
     $("planStatus").textContent="Backend unavailable — local plan remains available; no fabricated production run was created.";
   }finally{$("runProduction").disabled=false; $("runProduction").textContent="🚀 Start Automission Production"}
 }
-async function refreshRun(){
+async async function executeStage(stage){
+  if(!activeRunId)return;
+  try{
+    const r=await fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)+"/stages/"+encodeURIComponent(stage)+"/execute",{method:"POST"});
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.detail||"stage execution failed");
+    renderRun(data);
+    $("planStatus").textContent=(stageLabels[stage]||stage)+" stage executed: structured hand-off updated.";
+  }catch(e){$("planStatus").textContent="Stage execution blocked: "+e.message}
+}
+function refreshRun(){
   if(!activeRunId)return;
   try{const r=await fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)); if(r.ok)renderRun(await r.json())}catch(e){}
 }
