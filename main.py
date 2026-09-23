@@ -470,3 +470,71 @@ async def studio_manifest(request: StudioPlanRequest, http_request: Request):
         "artifacts": ["story.json", "character-bible.json", "storyboard.json", "music-cues.json", "animation-plan.json", "edit-plan.json", "qc-report.json"],
         "policy": {"no_secret_exposure": True, "no_fabricated_rendering_claims": True, "human_review_before_publication": True},
     }
+
+
+# In-memory Creative Studio production runs. Demo mode creates structured
+# planning artifacts without claiming that external animation rendering occurred.
+STUDIO_RUNS: dict[str, dict] = {}
+
+
+@app.post("/api/studio/run")
+async def studio_run(request: StudioPlanRequest, http_request: Request):
+    enforce_rate_limit(http_request)
+    run_id = str(uuid.uuid4())
+    idea = request.idea.strip()
+    title = _studio_title(idea)
+    stages = [
+        ("story", "story-architect"),
+        ("characters", "character-director"),
+        ("storyboard", "storyboard-agent"),
+        ("music", "music-agent"),
+        ("animation", "animation-planner"),
+        ("editing", "film-editor"),
+        ("qc", "qc-agent"),
+    ]
+    run = {
+        "schema_version": 1,
+        "run_id": run_id,
+        "status": "REVIEW_REQUIRED",
+        "project": {"title": title, "brief": idea, "language": request.language, "format": request.format},
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "render_available": not DEMO_MODE,
+        "review_required": True,
+        "stages": [
+            {"stage": stage, "agent": agent, "status": "PLANNED" if stage != "qc" else "REVIEW_REQUIRED",
+             "artifact": f"{stage}.json"}
+            for stage, agent in stages
+        ],
+        "artifacts": [
+            {"name": "production-manifest.json", "type": "manifest", "status": "READY"},
+            *[
+                {"name": f"{stage}.json", "type": "planning_artifact",
+                 "status": "REVIEW_REQUIRED" if stage == "qc" else "PLANNED"}
+                for stage, _ in stages
+            ],
+        ],
+        "policy": {
+            "no_secret_exposure": True,
+            "no_fabricated_rendering_claims": True,
+            "human_review_before_publication": True,
+            "provider_neutral_adapters": True,
+        },
+    }
+    STUDIO_RUNS[run_id] = run
+    return run
+
+
+@app.get("/api/studio/runs/{run_id}")
+async def studio_run_status(run_id: str):
+    run = STUDIO_RUNS.get(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Production run not found")
+    return run
+
+
+@app.get("/api/studio/runs/{run_id}/manifest")
+async def studio_run_manifest(run_id: str):
+    run = STUDIO_RUNS.get(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Production run not found")
+    return run
