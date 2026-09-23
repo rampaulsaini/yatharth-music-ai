@@ -12,7 +12,7 @@ required_contracts = ["/api/studio/plan", "StudioPlanRequest", "StudioPlanRespon
 assert manifest["schema_version"] == 1
 assert manifest["policy"]["no_secret_exposure"] is True
 assert manifest["policy"]["no_fabricated_rendering_claims"] is True
-assert required_agents.issubset(set(main.split('id="')[1].split('"')[0] for _ in range(0)))
+assert all(agent in main for agent in required_agents)
 assert all(token in main for token in required_contracts)
 assert 'fetch("/api/studio/plan"' in studio
 ast.parse(main)
