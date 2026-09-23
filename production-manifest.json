@@ -4,6 +4,13 @@
   "mode": "free-first-orchestration",
   "goal": "Coordinate music, story, character, storyboard, animation and film-editing stages through specialist agents.",
   "music_engine": "Yatharth Music AI / ACE-Step adapter",
+  "federation": {
+    "enabled": true,
+    "source_repository": "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-",
+    "event_type": "yatharth_studio_request",
+    "intake_workflow": ".github/workflows/shirmani-federation-intake.yml",
+    "receipt_directory": "federation/inbox"
+  },
   "agents": [
     {"id":"story-architect","role":"story","input":["creative_brief"],"output":["logline","script","dialogue"]},
     {"id":"character-director","role":"characters","input":["script"],"output":["character_bible","asset_prompts"]},
