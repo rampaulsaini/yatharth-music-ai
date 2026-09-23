@@ -538,3 +538,34 @@ async def studio_run_manifest(run_id: str):
     if not run:
         raise HTTPException(status_code=404, detail="Production run not found")
     return run
+
+
+@app.get("/api/studio/runs/{run_id}/artifacts/{artifact_name}")
+async def studio_run_artifact(run_id: str, artifact_name: str):
+    """Return a deterministic structured planning artifact for a production run."""
+    run = STUDIO_RUNS.get(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Production run not found")
+    safe_name = artifact_name.strip()
+    allowed = {item["name"] for item in run["artifacts"]}
+    if safe_name not in allowed:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    project = run["project"]
+    counts = _studio_counts(project["brief"], [])
+    stage_by_name = {stage["stage"]: stage for stage in run["stages"]}
+    if safe_name == "production-manifest.json":
+        return run
+    stage = safe_name.removesuffix(".json")
+    stage_meta = stage_by_name.get(stage)
+    if not stage_meta:
+        raise HTTPException(status_code=404, detail="Artifact stage not found")
+    payloads = {
+        "story": {"deliverable": "story", "title": project["title"], "brief": project["brief"], "language": project["language"], "format": project["format"], "status": stage_meta["status"]},
+        "characters": {"deliverable": "character_bible", "planned_characters": counts["characters"], "continuity": "required", "status": stage_meta["status"]},
+        "storyboard": {"deliverable": "storyboard", "planned_scenes": counts["scenes"], "planned_shots": counts["shots"], "status": stage_meta["status"]},
+        "music": {"deliverable": "music_cues", "tracks": counts["music"], "adapter": "Yatharth Music AI / ACE-Step", "status": stage_meta["status"]},
+        "animation": {"deliverable": "animation_plan", "planned_scenes": counts["scenes"], "render_available": run["render_available"], "status": stage_meta["status"]},
+        "editing": {"deliverable": "edit_plan", "assembly": "planned", "publication_gate": "human_review", "status": stage_meta["status"]},
+        "qc": {"deliverable": "qc_report", "review_required": run["review_required"], "status": stage_meta["status"]},
+    }
+    return {"schema_version": 1, "run_id": run_id, "artifact": safe_name, "project": project, "data": payloads[stage], "policy": run["policy"]}
