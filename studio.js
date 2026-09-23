@@ -53,3 +53,45 @@ $("plan").onclick=buildPlan;
 $("newProject").onclick=()=>{$("idea").focus();window.scrollTo({top:$("idea").getBoundingClientRect().top+scrollY-90,behavior:"smooth"})};
 $("clearProjects").onclick=()=>{projects=[];localStorage.removeItem(KEY);render()};
 render();
+let activeRunId=null;
+const stageLabels={story:"Story",characters:"Characters",storyboard:"Storyboard",music:"Music",animation:"Animation",editing:"Editing",qc:"Quality Control"};
+function stageClass(status){return String(status||"PLANNED").toLowerCase().replace(/[^a-z_]/g,"-")}
+function renderRun(data){
+  activeRunId=data.run_id||activeRunId;
+  $("runId").textContent=activeRunId||"—"; $("runBadge").textContent=data.status||"READY";
+  $("runMode").textContent=data.render_available?"RENDER ADAPTER AVAILABLE":"PLANNING / ADAPTERS REQUIRED";
+  const stages=data.stages||[], ready=stages.filter(s=>["READY","COMPLETED","DONE"].includes(s.status)).length;
+  $("runProgressText").textContent=ready+" / "+stages.length+" stages";
+  $("runProgressBar").style.width=(stages.length?Math.round(ready/stages.length*100):0)+"%";
+  $("stageList").innerHTML=stages.map((s,i)=>'<div class="run-stage"><span class="stage-num">'+String(i+1).padStart(2,"0")+'</span><div><b>'+esc(stageLabels[s.stage]||s.stage)+'</b><small>'+esc(s.agent||"agent")+'</small></div><i class="state-'+stageClass(s.status)+'">'+esc(s.status)+'</i></div>').join("");
+  $("artifactList").innerHTML=(data.artifacts||[]).map(a=>'<div class="artifact"><div><b>'+esc(a.name)+'</b><small>'+esc(a.type||"structured artifact")+'</small></div><span>'+esc(a.status||"PLANNED")+'</span></div>').join("")||'<div class="empty">No run artifacts yet.</div>';
+  $("downloadManifest").disabled=!activeRunId; $("reviewGate").classList.toggle("attention",!!data.review_required);
+}
+async function startProduction(){
+  const idea=$("idea").value.trim();
+  if(!idea){$("planStatus").textContent="पहले creative idea लिखें."; $("idea").focus(); return}
+  const styles=selectedStyles(), payload={idea,language:$("lang").value,format:$("format").value,styles};
+  $("runProduction").disabled=true; $("runProduction").textContent="⏳ Starting Automission…";
+  try{
+    const r=await fetch("/api/studio/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error("run API unavailable");
+    const data=await r.json(); renderRun(data);
+    $("productionRun").scrollIntoView({behavior:"smooth",block:"start"});
+    $("planStatus").textContent="Automission production run created. Planning artifacts are registered; execution adapters remain explicit.";
+    $("projectState").textContent=data.status||"RUN CREATED";
+  }catch(e){
+    $("runBadge").textContent="LOCAL FALLBACK"; $("runMode").textContent="NO BACKEND";
+    $("planStatus").textContent="Backend unavailable — local plan remains available; no fabricated production run was created.";
+  }finally{$("runProduction").disabled=false; $("runProduction").textContent="🚀 Start Automission Production"}
+}
+async function refreshRun(){
+  if(!activeRunId)return;
+  try{const r=await fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)); if(r.ok)renderRun(await r.json())}catch(e){}
+}
+async function exportManifest(){
+  if(!activeRunId)return;
+  const r=await fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)+"/manifest"); if(!r.ok)return;
+  const blob=new Blob([JSON.stringify(await r.json(),null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a"); a.href=url; a.download="yatharth-production-"+activeRunId+".json"; a.click(); URL.revokeObjectURL(url);
+}
+$("runProduction").onclick=startProduction; $("downloadManifest").onclick=exportManifest; setInterval(refreshRun,15000);
