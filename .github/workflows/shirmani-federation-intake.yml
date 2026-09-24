@@ -1,0 +1,70 @@
+name: Shirmani Federation - Creative Studio Intake
+
+on:
+  repository_dispatch:
+    types: [yatharth_studio_request]
+  workflow_dispatch:
+    inputs:
+      brief:
+        description: "Creative brief"
+        required: true
+        type: string
+      format:
+        description: "Production format"
+        required: false
+        default: "animated-film"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build federation receipt
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BRIEF: ${{ inputs.brief }}
+          FORMAT: ${{ inputs.format }}
+          SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
+          AUTOMATION_MODE: ${{ github.event.client_payload.automation_mode }}
+        run: |
+          set -euo pipefail
+          mkdir -p federation/inbox
+          export BRIEF FORMAT SOURCE_REPOSITORY AUTOMATION_MODE EVENT_NAME
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          payload = {
+            "schema_version": 1,
+            "received_at": datetime.now(timezone.utc).isoformat(),
+            "event": os.getenv("EVENT_NAME", ""),
+            "source_repository": os.getenv("SOURCE_REPOSITORY") or "manual",
+            "automation_mode": os.getenv("AUTOMATION_MODE") or "MANUAL",
+            "brief": os.getenv("BRIEF", ""),
+            "format": os.getenv("FORMAT") or "animated-film",
+            "pipeline": ["story","characters","storyboard","music","animation-plan","editing-plan","quality-review"],
+            "status": "RECEIVED",
+            "policies": {
+              "no_secret_exposure": True,
+              "no_fabricated_rendering_claims": True,
+              "human_review_before_publication": True,
+              "provider_neutral_adapters": True
+            }
+          }
+          stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+          with open(f"federation/inbox/{stamp}.json", "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+          PY
+      - name: Commit intake receipt
+        run: |
+          git config user.name "Yatharth Automission"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add federation/inbox
+          git diff --cached --quiet || git commit -m "Record Shirmani federation intake"
+          git push
+      - name: Validate Creative Studio contract
+        run: python scripts/validate-creative-studio.py
