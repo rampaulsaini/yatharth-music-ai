@@ -4,12 +4,19 @@
 
 Yatharth Mudra is a proposed capped utility-token/accounting layer for the Yatharth ecosystem. It is intended to support transparent internal credits, creator rewards, digital-product access, and ecosystem accounting.
 
+## Genesis principle: “अमूल्य से शुरुआत”
+
+The intended genesis rule is **unpriced at genesis**: YTH starts without an assigned monetary market price.
+
+“अमूल्य” here means **no initial monetary price is declared or promised**. It does not mean a guaranteed future market value, guaranteed appreciation, or a claim that one YTH has an objectively immeasurable monetary worth. If YTH ever acquires an exchange value, that value would need to arise through actual, legally permitted market activity and disclosed rules rather than an administratively promised price.
+
 ## What this is
 
 - Proposed token symbol: **YTH**
 - Proposed maximum supply: **1,000,000,000 YTH**
 - Decimal precision: **8**
 - Initial supply: **0** until a separately reviewed deployment is authorized
+- Initial monetary price: **not assigned**
 - Network: **not selected**
 - Contract: **not deployed**
 - Security audit: **not completed**
@@ -22,7 +29,7 @@ The design borrows some *engineering ideas* associated with Bitcoin—public ver
 
 ## “Distilled” principle
 
-The proposed model is “distilled” into a small, auditable rule set: fixed maximum supply, no hidden minting, explicit allocations, public receipts, and independently verifiable deployment details.
+The proposed model is “distilled” into a small, auditable rule set: fixed maximum supply, no hidden minting, explicit allocations, public receipts, an unpriced genesis state, and independently verifiable deployment details.
 
 ## Production gates
 
