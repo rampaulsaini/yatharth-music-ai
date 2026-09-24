@@ -4,6 +4,10 @@ on:
   push:
     paths:
       - "production-manifest.json"
+      - "federation/creative-studio-contract.json"
+      - "federation/inbox/**"
+      - "federation/outbox/**"
+      - ".github/workflows/shirmani-federation-intake.yml"
       - "studio.html"
       - "studio.js"
       - ".github/workflows/creative-studio-orchestrator.yml"
