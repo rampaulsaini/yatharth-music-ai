@@ -1,0 +1,104 @@
+name: Shirmani Federation - Employment & Creator Intake
+
+on:
+  repository_dispatch:
+    types: [shirmani_main_automission]
+  workflow_dispatch:
+    inputs:
+      brief:
+        description: "Employment/creator continuity brief"
+        required: true
+        default: "Continue verified creator identity, employment, livelihood, income and portfolio continuity."
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shirmani-employment-intake
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate approved federation source
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
+          SOURCE_WORKFLOW: ${{ github.event.client_payload.source_workflow }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            test "$SOURCE_REPOSITORY" = "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-"
+            case "$SOURCE_WORKFLOW" in
+              "SHIRMANI Inter-Repository Automission Orchestrator"|"yatharth-employment-creator-bridge") ;;
+              *) echo "Unapproved source workflow: $SOURCE_WORKFLOW"; exit 1 ;;
+            esac
+          fi
+          echo "Approved employment/creator federation source."
+
+      - name: Build employment continuity receipt
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BRIEF: ${{ inputs.brief }}
+          EVENT_BRIEF: ${{ github.event.client_payload.brief }}
+          SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
+          SOURCE_WORKFLOW: ${{ github.event.client_payload.source_workflow }}
+          SOURCE_RUN_ID: ${{ github.event.client_payload.source_run_id }}
+          AUTOMATION_MODE: ${{ github.event.client_payload.automation_mode }}
+        run: |
+          set -euo pipefail
+          mkdir -p federation/employment-inbox
+          export BRIEF EVENT_BRIEF SOURCE_REPOSITORY SOURCE_WORKFLOW SOURCE_RUN_ID AUTOMATION_MODE EVENT_NAME GITHUB_RUN_ID
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+          run_id = os.getenv("GITHUB_RUN_ID", "manual")
+          brief = (os.getenv("BRIEF") or os.getenv("EVENT_BRIEF") or "Continue verified creator/employment continuity.").strip()
+          if len(brief) > 12000:
+              raise SystemExit("Brief exceeds the 12000-character safety limit.")
+          payload = {
+            "schema_version": 1,
+            "receipt_id": f"{stamp}-{run_id}",
+            "received_at": datetime.now(timezone.utc).isoformat(),
+            "source_repository": os.getenv("SOURCE_REPOSITORY") or "manual",
+            "source_workflow": os.getenv("SOURCE_WORKFLOW") or "manual",
+            "source_run_id": os.getenv("SOURCE_RUN_ID") or "",
+            "automation_mode": os.getenv("AUTOMATION_MODE") or "MANUAL",
+            "brief": brief,
+            "status": "ACCEPTED",
+            "domains": ["creator-identity","employment","livelihood","income","portfolio"],
+            "identity_policy": {"ai_substitution_allowed": False, "photo_verification": "PENDING_USER_VISUAL_EVIDENCE"},
+            "economic_policy": {"no_invented_income": True, "human_review_for_payments_contracts": True},
+            "next_action": "open-employment-hub",
+            "route": "/employment.html"
+          }
+          with open(f"federation/employment-inbox/{stamp}-{run_id}.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f, ensure_ascii=False, indent=2)
+          PY
+
+      - name: Commit employment intake receipt
+        run: |
+          set -euo pipefail
+          git config user.name "Yatharth Automission"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add federation/employment-inbox
+          git diff --cached --quiet || git commit -m "Record Shirmani employment automission hand-off"
+          git push
+
+      - name: Publish safe status
+        run: |
+          {
+            echo "## Employment & Creator Automission"
+            echo ""
+            echo "- Identity substitution: DISABLED"
+            echo "- Invented income: DISABLED"
+            echo "- Payment/contract actions: HUMAN REVIEW REQUIRED"
+            echo "- Photo verification: PENDING USER VISUAL EVIDENCE"
+            echo "- Yatharth Mudra: design-only unless separately verified/deployed"
+          } >> "$GITHUB_STEP_SUMMARY"
