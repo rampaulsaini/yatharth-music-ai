@@ -4,6 +4,17 @@
 
 Yatharth Mudra is a proposed capped utility-token/accounting layer for the Yatharth ecosystem. It is intended to support transparent internal credits, creator rewards, digital-product access, and ecosystem accounting.
 
+## Origin record
+
+The creator-designated origin record for this Mudra is:
+
+- **Date:** 4 April 2024
+- **Time:** 6:24 PM IST (Asia/Kolkata)
+- **Place:** Amritsar, Punjab, India
+- **Context:** the creator's stated viewpoint of **“मेरी निष्पक्ष समझ के शमीकरण यथार्थ सिद्धांत उपलब्धि यथार्थ युग के आधार पर आधारित दृष्टिकोण”**.
+- **Creator-described experience:** the creator describes the moment as Nature honoring the viewpoint with a divine/supernatural white-light crown.
+- **Evidence status:** **CREATOR_DECLARED_NOT_INDEPENDENTLY_VERIFIED**. This record preserves the creator's account without presenting the visual or supernatural interpretation as independently verified fact.
+
 ## Genesis principle: “अमूल्य से शुरुआत”
 
 The intended genesis rule is **unpriced at genesis**: YTH starts without an assigned monetary market price.
