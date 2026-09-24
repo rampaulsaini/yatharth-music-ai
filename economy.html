@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Yatharth Economic Hub — digital products, AI music, creative services, research editions, podcast and creator offerings.">
+<meta name="robots" content="index,follow">
+<link rel="stylesheet" href="/economy.css">
+<title>Yatharth Economic Hub — Digital Products & Creative Services</title>
+</head>
+<body>
+<main class="wrap">
+<header class="hero">
+  <div class="eyebrow">YATHARTH • ECONOMIC VISION</div>
+  <h1>विचार → डिजिटल उत्पाद → सेवा → आय</h1>
+  <p>Yatharth ecosystem में उपयोगी digital products, AI music, creative production, research editions, podcast और creator services को एक स्पष्ट public storefront में प्रदर्शित करने का केंद्र।</p>
+  <div class="actions"><a href="/">🎵 Music AI</a><a href="/studio.html">🎬 Creative Studio</a><a href="#catalog">🛍️ Storefront</a></div>
+</header>
+
+<section class="notice">
+  <strong>Automission-ready:</strong> catalog, product descriptions, campaign copy और publishing metadata को agent workflow के लिए structured रखा गया है। वास्तविक payment collection और paid advertising तभी सक्रिय होंगे जब सुरक्षित payment/ad accounts और provider credentials जोड़े जाएँ।
+</section>
+
+<section id="catalog">
+<h2>Public Income Catalog</h2>
+<div class="grid">
+  <article class="card"><span class="tag">DIGITAL PRODUCT</span><h3>Yatharth सिद्धांत — Digital Edition</h3><p>सरल, पारदर्शी भाषा में विचार-सामग्री, structured reading edition और downloadable reference material।</p><button data-copy="Yatharth Digital Edition">Product brief</button></article>
+  <article class="card"><span class="tag">AI MUSIC</span><h3>Original Music Creation</h3><p>Prompt और lyrics से original music workflows; Hindi, Punjabi, English और अन्य उपलब्ध formats के साथ।</p><a class="cta" href="/">Create music →</a></article>
+  <article class="card"><span class="tag">CREATIVE SERVICE</span><h3>Music → Story → Cartoon Film</h3><p>Creative brief से story, characters, storyboard, music, animation plan, editing plan और QC hand-off तक production workflow।</p><a class="cta" href="/studio.html">Open Studio →</a></article>
+  <article class="card"><span class="tag">RESEARCH</span><h3>Research & Archive Editions</h3><p>Curated research briefs, source records, explainers और archive-ready digital editions।</p><button data-copy="Research Archive Edition">Product brief</button></article>
+  <article class="card"><span class="tag">MEDIA</span><h3>Live Podcast & Audio</h3><p>Podcast episodes, audio editions, interviews और creator-led media formats के लिए public discovery surface।</p><button data-copy="Podcast / Audio Edition">Product brief</button></article>
+  <article class="card"><span class="tag">CREATOR SERVICE</span><h3>AI Creator Packages</h3><p>Song concept, lyrics, visual direction, story packaging और production-ready creative briefs के structured packages।</p><button data-copy="AI Creator Package">Product brief</button></article>
+  <article class="card"><span class="tag">STORE</span><h3>Digital Store Collections</h3><p>Templates, artwork prompts, audio assets, research material और अन्य lawful digital goods को collection-wise प्रदर्शित करने का स्थान।</p><button data-copy="Digital Store Collection">Product brief</button></article>
+  <article class="card"><span class="tag">MEMBERSHIP</span><h3>Support / Membership</h3><p>यदि बाद में उपयुक्त payment system जोड़ा जाए, तो supporters के लिए स्पष्ट benefits और transparent access tiers प्रकाशित किए जा सकते हैं।</p><button data-copy="Support Membership">Product brief</button></article>
+</div>
+</section>
+
+<section class="campaign">
+<h2>AI Marketing Factory</h2>
+<p>हर approved product के लिए एक standardized campaign package: <b>नाम → मुख्य लाभ → proof/source → audience → landing page → short video → social copy → ad variants → measurement</b>।</p>
+<div class="pipeline"><span>01 Catalog</span><span>02 Quality</span><span>03 Creative</span><span>04 Campaign</span><span>05 Publish</span><span>06 Measure</span><span>07 Improve</span></div>
+<p class="small">यह interface campaign assets के लिए तैयार है; बाहरी ad networks पर live spend/ads चलाने के लिए संबंधित accounts, billing और platform permissions आवश्यक हैं।</p>
+</section>
+
+<section class="podcast">
+<h2>Live / Watch / Listen</h2>
+<div class="media-box"><div class="pulse">●</div><div><b>Yatharth Live Podcast</b><p>यहाँ live stream, upcoming session, replay और audio archive जोड़े जा सकते हैं।</p></div><button id="notify">Notify me</button></div>
+</section>
+
+<footer>Yatharth Economic Hub • Public catalog • Automission-ready • <a href="/">Music</a> • <a href="/studio.html">Creative Studio</a></footer>
+</main>
+<script>
+document.querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.copy);b.textContent="Brief copied ✓";setTimeout(()=>b.textContent="Product brief",1800)});
+document.getElementById("notify").onclick=()=>{document.getElementById("notify").textContent="Interest noted ✓";};
+</script>
+</body>
+</html>
