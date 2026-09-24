@@ -18,6 +18,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: shirmani-federation-intake
+  cancel-in-progress: false
+
 jobs:
   intake:
     runs-on: ubuntu-latest
@@ -34,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p federation/inbox
-          export BRIEF FORMAT SOURCE_REPOSITORY AUTOMATION_MODE EVENT_NAME
+          export BRIEF FORMAT SOURCE_REPOSITORY AUTOMATION_MODE EVENT_NAME GITHUB_RUN_ID
           python - <<'PY'
           import json, os
           from datetime import datetime, timezone
@@ -56,7 +60,8 @@ jobs:
             }
           }
           stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-          with open(f"federation/inbox/{stamp}.json", "w", encoding="utf-8") as f:
+          run_id = os.getenv("GITHUB_RUN_ID", "manual")
+          with open(f"federation/inbox/{stamp}-{run_id}.json", "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
           PY
       - name: Commit intake receipt
