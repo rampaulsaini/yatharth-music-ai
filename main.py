@@ -635,7 +635,7 @@ async def studio_execute_stage(run_id: str, stage: str, http_request: Request):
     item["executed_at"] = datetime.now(timezone.utc).isoformat()
     if stage != "qc" and all(s["status"] in {"COMPLETED", "READY", "DONE"} for s in run["stages"][:-1]):
         run["status"] = "REVIEW_REQUIRED"
-    return run
+    return _public_studio_run(run)
 
 
 @app.get("/api/studio/runs/{run_id}/artifacts/{artifact_name}")
@@ -653,7 +653,7 @@ async def studio_run_artifact(run_id: str, artifact_name: str, http_request: Req
     counts = _studio_counts(project["brief"], project.get("styles", []))
     stage_by_name = {stage["stage"]: stage for stage in run["stages"]}
     if safe_name == "production-manifest.json":
-        return run
+        return _public_studio_run(run)
     stage = safe_name.removesuffix(".json")
     stage_meta = stage_by_name.get(stage)
     if not stage_meta:

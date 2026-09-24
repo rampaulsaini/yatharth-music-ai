@@ -38,6 +38,8 @@ assert "def _studio_owner" in main
 assert "_public_studio_run" in main
 assert "_prune_studio_runs" in main
 assert "MAX_STUDIO_RUNS_IN_MEMORY" in main
+assert 'return _public_studio_run(run)\n\n\n@app.get("/api/studio/runs/{run_id}/artifacts/{artifact_name}")' in main
+assert 'if safe_name == "production-manifest.json":\n        return _public_studio_run(run)' in main
 assert 'fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)+"/music-task"' in studio
 
 
