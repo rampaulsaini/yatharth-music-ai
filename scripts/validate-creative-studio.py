@@ -34,6 +34,10 @@ print("creative-studio artifact contract validation: PASS")
 
 assert "lyrics=request.lyrics" in main
 assert '"client_id": client_id(http_request)' in main
+assert "def _studio_owner" in main
+assert "_public_studio_run" in main
+assert "_prune_studio_runs" in main
+assert "MAX_STUDIO_RUNS_IN_MEMORY" in main
 assert 'fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)+"/music-task"' in studio
 
 
