@@ -65,7 +65,7 @@ function renderRun(data){
   $("runProgressBar").style.width=(stages.length?Math.round(ready/stages.length*100):0)+"%";
   $("stageList").innerHTML=stages.map((s,i)=>'<div class="run-stage"><span class="stage-num">'+String(i+1).padStart(2,"0")+'</span><div><b>'+esc(stageLabels[s.stage]||s.stage)+'</b><small>'+esc(s.agent||"agent")+'</small></div><i class="state-'+stageClass(s.status)+'">'+esc(s.status)+'</i>'+((s.status==="PLANNED")?'<button class="ghost stage-execute" data-stage="'+esc(s.stage)+'">Execute</button>':'')+((s.stage==="music"&&["READY","COMPLETED","DONE"].includes(s.status))?'<button class="ghost music-generate">Generate Music</button>':'')+'</div>').join("");
   $("artifactList").innerHTML=(data.artifacts||[]).map(a=>'<div class="artifact"><div><b>'+esc(a.name)+'</b><small>'+esc(a.type||"structured artifact")+'</small></div><div class="artifact-actions"><span>'+esc(a.status||"PLANNED")+'</span><button class="ghost artifact-open" data-artifact="'+encodeURIComponent(a.name)+'">View</button><button class="ghost artifact-download" data-artifact="'+encodeURIComponent(a.name)+'">JSON</button></div></div>').join("")||'<div class="empty">No run artifacts yet.</div>';
-  document.querySelectorAll(".artifact-open").forEach(b=>b.onclick=()=>viewArtifact(decodeURIComponent(b.dataset.artifact)));
+  document.querySelectorAll(".artifact-open").forEach(b=>b.onclick=()=>viewArtifact(decodeURIComponent(b.dataset.artifact))); document.querySelectorAll(".stage-execute").forEach(b=>b.onclick=()=>executeStage(b.dataset.stage)); document.querySelectorAll(".music-generate").forEach(b=>b.onclick=generateStudioMusic);
   document.querySelectorAll(".artifact-download").forEach(b=>b.onclick=()=>downloadArtifact(decodeURIComponent(b.dataset.artifact))); document.querySelectorAll(".stage-execute").forEach(b=>b.onclick=()=>executeStage(b.dataset.stage)); document.querySelectorAll(".music-generate").forEach(b=>b.onclick=generateStudioMusic);
   $("downloadManifest").disabled=!activeRunId; $("reviewGate").classList.toggle("attention",!!data.review_required);
 }
@@ -107,6 +107,18 @@ async function executeStage(stage){
     $("planStatus").textContent=(stageLabels[stage]||stage)+" stage executed: structured hand-off updated.";
   }catch(e){$("planStatus").textContent="Stage execution blocked: "+e.message}
 }
+async function advanceProduction(){
+  if(!activeRunId){$("planStatus").textContent="पहले Automission Production run शुरू करें.";return}
+  $("advanceProduction").disabled=true;
+  try{
+    const r=await fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)+"/advance",{method:"POST"});
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.detail||"advance failed");
+    renderRun(data);
+    $("planStatus").textContent="Automission Advance: अगला eligible stage सुरक्षित रूप से आगे बढ़ाया गया.";
+  }catch(e){$("planStatus").textContent="Automission Advance blocked: "+e.message}
+  finally{$("advanceProduction").disabled=false}
+}
 async function refreshRun(){
   if(!activeRunId)return;
   try{
@@ -142,4 +154,4 @@ async function exportManifest(){
   const blob=new Blob([JSON.stringify(await r.json(),null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob),a=document.createElement("a"); a.href=url; a.download="yatharth-production-"+activeRunId+".json"; a.click(); URL.revokeObjectURL(url);
 }
-$("runProduction").onclick=startProduction; $("downloadManifest").onclick=exportManifest; setInterval(refreshRun,15000);
+$("runProduction").onclick=startProduction; $("advanceProduction").onclick=advanceProduction; $("downloadManifest").onclick=exportManifest; setInterval(refreshRun,15000);
