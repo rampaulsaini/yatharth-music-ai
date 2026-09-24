@@ -27,7 +27,8 @@ assert 'fetch("/api/studio/plan"' in studio
 assert 'fetch("/api/studio/run"' in studio
 assert 'fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)' in studio
 html = (ROOT / "studio.html").read_text(encoding="utf-8")
-assert 'id="runProduction"' in html\nassert 'id="advanceProduction"' in html
+assert 'id="runProduction"' in html
+assert 'id="advanceProduction"' in html
 assert 'id="productionRun"' in html
 assert 'id="downloadManifest"' in html
 
