@@ -5,6 +5,11 @@
   "classification": "proposed utility token",
   "status": "DESIGN_ONLY_NOT_DEPLOYED",
   "purpose": "A transparent digital utility/accounting token for the Yatharth ecosystem; not represented as sovereign currency, legal tender, security, investment, or guaranteed store of value.",
+  "genesis_valuation": {
+    "mode": "UNPRICED_AT_GENESIS",
+    "initial_monetary_price": null,
+    "meaning": "YTH begins without an assigned monetary market price; any later exchange value, if legally permitted and actually established, must be determined by real market activity rather than a promised or administratively declared price."
+  },
   "design_principles": [
     "transparent",
     "auditable",
