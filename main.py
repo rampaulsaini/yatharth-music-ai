@@ -638,6 +638,40 @@ async def studio_execute_stage(run_id: str, stage: str, http_request: Request):
     return _public_studio_run(run)
 
 
+@app.post("/api/studio/runs/{run_id}/advance")
+async def studio_advance(run_id: str, http_request: Request):
+    """Advance exactly one eligible pipeline stage; never claims external rendering."""
+    run = STUDIO_RUNS.get(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Production run not found")
+    _studio_owner(run, http_request)
+    ordered = [s["stage"] for s in run["stages"]]
+    for index, stage_meta in enumerate(run["stages"]):
+        stage = stage_meta["stage"]
+        if stage == "qc":
+            stage_meta["status"] = "REVIEW_REQUIRED"
+            stage_meta["note"] = "Human review is required before publication."
+            stage_meta["executed_at"] = datetime.now(timezone.utc).isoformat()
+            run["status"] = "REVIEW_REQUIRED"
+            return _public_studio_run(run)
+        if stage_meta["status"] in {"PLANNED", "READY"}:
+            if index > 0 and run["stages"][index - 1]["status"] not in {"COMPLETED", "DONE", "READY"}:
+                continue
+            if stage == "music" and not DEMO_MODE:
+                stage_meta["status"] = "READY"
+                stage_meta["note"] = "Music stage prepared for the configured ACE-Step adapter; actual audio generation remains an explicit task."
+            elif stage in {"animation", "editing"}:
+                stage_meta["status"] = "READY"
+                stage_meta["note"] = "Structured hand-off prepared. External rendering/assembly adapter is required."
+            else:
+                stage_meta["status"] = "COMPLETED"
+                stage_meta["note"] = "Deterministic structured planning artifact generated; no external media generation claimed."
+            stage_meta["executed_at"] = datetime.now(timezone.utc).isoformat()
+            run["status"] = "REVIEW_REQUIRED"
+            return _public_studio_run(run)
+    return _public_studio_run(run)
+
+
 @app.get("/api/studio/runs/{run_id}/artifacts/{artifact_name}")
 async def studio_run_artifact(run_id: str, artifact_name: str, http_request: Request):
     """Return a deterministic structured planning artifact for a production run."""
