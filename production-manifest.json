@@ -7,9 +7,13 @@
   "federation": {
     "enabled": true,
     "source_repository": "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-",
+    "source_workflow": ".github/workflows/yatharth-creative-studio-bridge.yml",
     "event_type": "yatharth_studio_request",
     "intake_workflow": ".github/workflows/shirmani-federation-intake.yml",
-    "receipt_directory": "federation/inbox"
+    "contract": "federation/creative-studio-contract.json",
+    "receipt_directory": "federation/inbox",
+    "outbox_directory": "federation/outbox",
+    "approved_formats": ["animated-film", "animated-short", "music-video", "story-film"]
   },
   "agents": [
     {"id":"story-architect","role":"story","input":["creative_brief"],"output":["logline","script","dialogue"]},
