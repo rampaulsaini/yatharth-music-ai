@@ -28,48 +28,83 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Build federation receipt
+
+      - name: Validate approved federation source
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
+          SOURCE_WORKFLOW: ${{ github.event.client_payload.source_workflow }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            test "$SOURCE_REPOSITORY" = "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-"
+            test "$SOURCE_WORKFLOW" = "yatharth-creative-studio-bridge"
+          fi
+          echo "Approved federation source."
+
+      - name: Build federation receipt and automission hand-off
         env:
           EVENT_NAME: ${{ github.event_name }}
           BRIEF: ${{ inputs.brief }}
           FORMAT: ${{ inputs.format }}
           SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
+          SOURCE_WORKFLOW: ${{ github.event.client_payload.source_workflow }}
+          SOURCE_RUN_ID: ${{ github.event.client_payload.source_run_id }}
           AUTOMATION_MODE: ${{ github.event.client_payload.automation_mode }}
         run: |
           set -euo pipefail
-          mkdir -p federation/inbox
-          export BRIEF FORMAT SOURCE_REPOSITORY AUTOMATION_MODE EVENT_NAME GITHUB_RUN_ID
+          mkdir -p federation/inbox federation/outbox
+          export BRIEF FORMAT SOURCE_REPOSITORY SOURCE_WORKFLOW SOURCE_RUN_ID AUTOMATION_MODE EVENT_NAME GITHUB_RUN_ID
           python - <<'PY'
-          import json, os
+          import json, os, re
           from datetime import datetime, timezone
+          stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+          run_id = os.getenv("GITHUB_RUN_ID", "manual")
+          brief = os.getenv("BRIEF", "").strip()
+          fmt = (os.getenv("FORMAT") or "animated-film").strip().lower()
+          allowed = {"animated-film", "animated-short", "music-video", "story-film"}
+          if not brief:
+              raise SystemExit("Creative brief is required.")
+          if len(brief) > 12000:
+              raise SystemExit("Creative brief exceeds the 12000-character safety limit.")
+          if fmt not in allowed:
+              raise SystemExit(f"Unsupported production format: {fmt}")
+          safe_mode = re.sub(r"[^A-Za-z0-9_.-]", "_", os.getenv("AUTOMATION_MODE") or "MANUAL")[:32]
           payload = {
             "schema_version": 1,
+            "handoff_id": f"{stamp}-{run_id}",
             "received_at": datetime.now(timezone.utc).isoformat(),
-            "event": os.getenv("EVENT_NAME", ""),
             "source_repository": os.getenv("SOURCE_REPOSITORY") or "manual",
-            "automation_mode": os.getenv("AUTOMATION_MODE") or "MANUAL",
-            "brief": os.getenv("BRIEF", ""),
-            "format": os.getenv("FORMAT") or "animated-film",
-            "pipeline": ["story","characters","storyboard","music","animation-plan","editing-plan","quality-review"],
-            "status": "RECEIVED",
+            "source_workflow": os.getenv("SOURCE_WORKFLOW") or "manual",
+            "source_run_id": os.getenv("SOURCE_RUN_ID") or "",
+            "automation_mode": safe_mode,
+            "brief": brief,
+            "format": fmt,
+            "status": "ACCEPTED",
+            "next_action": "open-in-yatharth-creative-studio",
+            "pipeline": ["story","characters","storyboard","music","animation","editing","quality-review"],
             "policies": {
+              "approved_source_only": True,
               "no_secret_exposure": True,
               "no_fabricated_rendering_claims": True,
               "human_review_before_publication": True,
               "provider_neutral_adapters": True
             }
           }
-          stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-          run_id = os.getenv("GITHUB_RUN_ID", "manual")
           with open(f"federation/inbox/{stamp}-{run_id}.json", "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
+              json.dump(payload, f, ensure_ascii=False, indent=2)
+          with open(f"federation/outbox/{stamp}-{run_id}.json", "w", encoding="utf-8") as f:
+              json.dump({**payload, "status": "READY_FOR_STUDIO", "studio_route": "/studio.html"}, f, ensure_ascii=False, indent=2)
           PY
+
       - name: Commit intake receipt
         run: |
+          set -euo pipefail
           git config user.name "Yatharth Automission"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add federation/inbox
-          git diff --cached --quiet || git commit -m "Record Shirmani federation intake"
+          git add federation/inbox federation/outbox
+          git diff --cached --quiet || git commit -m "Record Shirmani creative studio automission hand-off"
           git push
+
       - name: Validate Creative Studio contract
         run: python scripts/validate-creative-studio.py
