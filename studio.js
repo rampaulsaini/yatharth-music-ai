@@ -107,9 +107,12 @@ async function executeStage(stage){
     $("planStatus").textContent=(stageLabels[stage]||stage)+" stage executed: structured hand-off updated.";
   }catch(e){$("planStatus").textContent="Stage execution blocked: "+e.message}
 }
-function refreshRun(){
+async function refreshRun(){
   if(!activeRunId)return;
-  try{const r=await fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)); if(r.ok)renderRun(await r.json())}catch(e){}
+  try{
+    const r=await fetch("/api/studio/runs/"+encodeURIComponent(activeRunId));
+    if(r.ok)renderRun(await r.json());
+  }catch(e){}
 }
 async function fetchArtifact(name){
   if(!activeRunId)return null;
