@@ -478,6 +478,26 @@ async def studio_manifest(request: StudioPlanRequest, http_request: Request):
 # In-memory Creative Studio production runs. Demo mode creates structured
 # planning artifacts without claiming that external animation rendering occurred.
 STUDIO_RUNS: dict[str, dict] = {}
+MAX_STUDIO_RUNS = max(100, int(os.getenv("MAX_STUDIO_RUNS_IN_MEMORY", "500")))
+
+def _studio_owner(run: dict, request: Request) -> str:
+    owner = run.get("client_id")
+    cid = client_id(request)
+    if owner and owner != cid:
+        raise HTTPException(status_code=403, detail="not allowed")
+    return cid
+
+def _public_studio_run(run: dict) -> dict:
+    public = dict(run)
+    public.pop("client_id", None)
+    return public
+
+def _prune_studio_runs() -> None:
+    if len(STUDIO_RUNS) <= MAX_STUDIO_RUNS:
+        return
+    ordered = sorted(STUDIO_RUNS.values(), key=lambda item: item.get("created_at", ""))
+    for run in ordered[:len(STUDIO_RUNS) - MAX_STUDIO_RUNS]:
+        STUDIO_RUNS.pop(run["run_id"], None)
 
 
 @app.post("/api/studio/run")
@@ -525,23 +545,26 @@ async def studio_run(request: StudioPlanRequest, http_request: Request):
         },
     }
     STUDIO_RUNS[run_id] = run
-    return run
+    _prune_studio_runs()
+    return _public_studio_run(run)
 
 
 @app.get("/api/studio/runs/{run_id}")
-async def studio_run_status(run_id: str):
+async def studio_run_status(run_id: str, http_request: Request):
     run = STUDIO_RUNS.get(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Production run not found")
-    return run
+    _studio_owner(run, http_request)
+    return _public_studio_run(run)
 
 
 @app.get("/api/studio/runs/{run_id}/manifest")
-async def studio_run_manifest(run_id: str):
+async def studio_run_manifest(run_id: str, http_request: Request):
     run = STUDIO_RUNS.get(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Production run not found")
-    return run
+    _studio_owner(run, http_request)
+    return _public_studio_run(run)
 
 
 @app.post("/api/studio/runs/{run_id}/music-task")
@@ -579,11 +602,12 @@ async def studio_music_task(run_id: str, http_request: Request):
     return {"run_id": run_id, "task_id": task.id, "status": task.status, "demo": DEMO_MODE, "reused": False}
 
 @app.post("/api/studio/runs/{run_id}/stages/{stage}/execute")
-async def studio_execute_stage(run_id: str, stage: str):
+async def studio_execute_stage(run_id: str, stage: str, http_request: Request):
     """Execute one supported orchestration stage without fabricating external media."""
     run = STUDIO_RUNS.get(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Production run not found")
+    _studio_owner(run, http_request)
     stage = stage.strip().lower()
     stage_map = {item["stage"]: item for item in run["stages"]}
     if stage not in stage_map:
@@ -615,11 +639,12 @@ async def studio_execute_stage(run_id: str, stage: str):
 
 
 @app.get("/api/studio/runs/{run_id}/artifacts/{artifact_name}")
-async def studio_run_artifact(run_id: str, artifact_name: str):
+async def studio_run_artifact(run_id: str, artifact_name: str, http_request: Request):
     """Return a deterministic structured planning artifact for a production run."""
     run = STUDIO_RUNS.get(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Production run not found")
+    _studio_owner(run, http_request)
     safe_name = artifact_name.strip()
     allowed = {item["name"] for item in run["artifacts"]}
     if safe_name not in allowed:
