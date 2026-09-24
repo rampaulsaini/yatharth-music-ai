@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "creator_name": "शिरोमणि रामपॉल सैनी",
+  "identity_label": "निष्पक्ष समझ",
+  "signature": "꙰\"𝒥शिरोमणि",
+  "identity_policy": {
+    "canonical_user_authored_identity": true,
+    "ai_substitution_allowed": false,
+    "photo_verification_state": "UNVERIFIED_PENDING_USER_UPLOAD",
+    "voice_policy": "Use only the creator's authorized/public source; do not clone or synthesize a third-party voice."
+  },
+  "canonical_photo": {
+    "source_url": "https://i.ibb.co/vxM3L1qs/enhanced-image.webp",
+    "repository_display_source": "https://raw.githubusercontent.com/rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-/main/css/assets/images/profile.jpg",
+    "exact_visual_match_verified": false,
+    "verification_note": "The supplied canonical URL is recorded as the requested source. Exact visual verification remains pending until the creator uploads the reference photo for inspection."
+  },
+  "public_voice_source": "https://youtube.com/@rampaulsaini-yk4gn",
+  "provenance": {
+    "source_type": "creator_declared",
+    "automated_replacement": false,
+    "human_review_required_for_identity_changes": true
+  }
+}
