@@ -35,3 +35,9 @@ print("creative-studio artifact contract validation: PASS")
 assert "lyrics=request.lyrics" in main
 assert '"client_id": client_id(http_request)' in main
 assert 'fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)+"/music-task"' in studio
+
+
+# Browser runtime syntax is part of the production contract.
+import subprocess
+subprocess.run(["node", "--check", str(ROOT / "studio.js")], check=True)
+print("studio.js syntax validation: PASS")
