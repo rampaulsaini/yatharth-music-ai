@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "name": "Shirmani → Yatharth Creative Studio Federation Contract",
+  "source_repository": "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-",
+  "target_repository": "rampaulsaini/yatharth-music-ai",
+  "event_type": "yatharth_studio_request",
+  "source_workflow": ".github/workflows/yatharth-creative-studio-bridge.yml",
+  "target_workflow": ".github/workflows/shirmani-federation-intake.yml",
+  "accepted_formats": ["animated-film", "animated-short", "music-video", "story-film"],
+  "pipeline": ["story","characters","storyboard","music","animation","editing","quality-review"],
+  "policy": {
+    "approved_source_only": true,
+    "no_secret_exposure": true,
+    "no_fabricated_rendering_claims": true,
+    "human_review_before_publication": true,
+    "provider_neutral_adapters": true
+  }
+}
