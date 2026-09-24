@@ -9,7 +9,7 @@ main = (ROOT / "main.py").read_text(encoding="utf-8")
 studio = (ROOT / "studio.js").read_text(encoding="utf-8")
 
 required_agents = {a["id"] for a in manifest["agents"]}
-required_contracts = ["/api/studio/plan", "/api/studio/status", "/api/studio/manifest", "/api/studio/run", "/api/studio/runs/{run_id}", "/api/studio/runs/{run_id}/manifest", "/api/studio/runs/{run_id}/artifacts/{artifact_name}", "/api/studio/runs/{run_id}/music-task", "StudioPlanRequest", "StudioPlanResponse"]
+required_contracts = ["/api/studio/plan", "/api/studio/status", "/api/studio/manifest", "/api/studio/run", "/api/studio/runs/{run_id}", "/api/studio/runs/{run_id}/advance", "/api/studio/runs/{run_id}/manifest", "/api/studio/runs/{run_id}/artifacts/{artifact_name}", "/api/studio/runs/{run_id}/music-task", "StudioPlanRequest", "StudioPlanResponse"]
 assert manifest["schema_version"] == 1
 assert manifest["policy"]["no_secret_exposure"] is True
 assert manifest["policy"]["no_fabricated_rendering_claims"] is True
@@ -27,7 +27,7 @@ assert 'fetch("/api/studio/plan"' in studio
 assert 'fetch("/api/studio/run"' in studio
 assert 'fetch("/api/studio/runs/"+encodeURIComponent(activeRunId)' in studio
 html = (ROOT / "studio.html").read_text(encoding="utf-8")
-assert 'id="runProduction"' in html
+assert 'id="runProduction"' in html\nassert 'id="advanceProduction"' in html
 assert 'id="productionRun"' in html
 assert 'id="downloadManifest"' in html
 
