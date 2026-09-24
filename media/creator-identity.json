@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "name": "Shiromani Rampal Saini",
+    "concept_label": "निष्पक्ष समझ",
+    "photo_url": "https://raw.githubusercontent.com/rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-/main/css/assets/images/profile.jpg",
+    "photo_source_repository": "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-",
+    "photo_source_path": "css/assets/images/profile.jpg",
+    "voice_source_url": "https://youtube.com/@rampaulsaini-yk4gn",
+    "voice_source_type": "public_channel",
+    "voice_asset_status": "SOURCE_LINKED_ASSET_NOT_COPIED"
+  },
+  "policy": {
+    "source_attribution": true,
+    "no_fabricated_voice_asset": true,
+    "no_fabricated_identity_claims": true,
+    "public_media_requires_source": true
+  }
+}
