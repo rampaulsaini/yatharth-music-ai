@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "name": "Yatharth Mudra",
+  "symbol": "YTH",
+  "classification": "proposed utility token",
+  "status": "DESIGN_ONLY_NOT_DEPLOYED",
+  "purpose": "A transparent digital utility/accounting token for the Yatharth ecosystem; not represented as sovereign currency, legal tender, security, investment, or guaranteed store of value.",
+  "design_principles": [
+    "transparent",
+    "auditable",
+    "limited issuance",
+    "no hidden minting",
+    "provider-neutral",
+    "human-review-for-critical-actions"
+  ],
+  "supply": {
+    "model": "capped",
+    "max_units": "1000000000",
+    "decimals": 8,
+    "initial_mint": "0",
+    "minting": "disabled_by_default"
+  },
+  "accounting_unit": "1 YTH = 100000000 atomic units",
+  "allocation": {
+    "community_and_ecosystem": 0.4,
+    "creator_and_operations": 0.2,
+    "treasury": 0.15,
+    "development": 0.15,
+    "reserve": 0.1
+  },
+  "vesting_required": true,
+  "governance": "not defined in this prototype; no unilateral governance claims",
+  "transfer": "planned",
+  "network": "UNSELECTED",
+  "contract_status": "NOT_DEPLOYED",
+  "audit_status": "NOT_AUDITED",
+  "compliance_status": "REQUIRES_JURISDICTIONAL_REVIEW_BEFORE_LAUNCH",
+  "safeguards": [
+    "no guaranteed returns",
+    "no price target",
+    "no investment solicitation",
+    "testnet-first",
+    "public contract address only after verified deployment",
+    "independent security review before production"
+  ],
+  "ecosystem_links": {
+    "creative_studio": "../studio.html",
+    "products": "../products.html",
+    "income_hub": "../income-hub.html"
+  }
+}
