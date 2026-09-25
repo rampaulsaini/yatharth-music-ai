@@ -2,7 +2,7 @@ name: Shirmani Federation - Creative Studio Intake
 
 on:
   repository_dispatch:
-    types: [yatharth_studio_request]
+    types: [yatharth_studio_request, shirmani_main_automission]
   workflow_dispatch:
     inputs:
       brief:
@@ -38,7 +38,10 @@ jobs:
           set -euo pipefail
           if [ "$EVENT_NAME" = "repository_dispatch" ]; then
             test "$SOURCE_REPOSITORY" = "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-"
-            test "$SOURCE_WORKFLOW" = "yatharth-creative-studio-bridge"
+            case "$SOURCE_WORKFLOW" in
+              yatharth-creative-studio-bridge|yatharth-employment-creator-bridge) ;;
+              *) echo "Rejected federation source workflow: $SOURCE_WORKFLOW"; exit 1 ;;
+            esac
           fi
           echo "Approved federation source."
 
@@ -82,6 +85,7 @@ jobs:
             "format": fmt,
             "status": "ACCEPTED",
             "next_action": "open-in-yatharth-creative-studio",
+            "route": "shirmani_main_automission" if os.getenv("EVENT_NAME") == "repository_dispatch" and os.getenv("SOURCE_WORKFLOW") == "yatharth-employment-creator-bridge" else "yatharth_studio_request",
             "pipeline": ["story","characters","storyboard","music","animation","editing","quality-review"],
             "policies": {
               "approved_source_only": True,

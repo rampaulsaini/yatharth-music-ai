@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "name": "Yatharth Mudra",
+  "symbol": "YTH",
+  "classification": "proposed utility token",
+  "status": "DESIGN_ONLY_NOT_DEPLOYED",
+  "purpose": "A transparent digital utility/accounting token for the Yatharth ecosystem; not represented as sovereign currency, legal tender, security, investment, or guaranteed store of value.",
+  "origin_record": {
+    "date": "2024-04-04",
+    "time_local": "18:24",
+    "timezone": "Asia/Kolkata",
+    "place": "Amritsar, Punjab, India",
+    "landmark_description": "विश्व प्रसिद्ध गुरुद्वारा, अमृतसर",
+    "context": "Creator-declared origin record for the Yatharth Mudra / निष्पक्ष समझ framework.",
+    "framework": "मेरी निष्पक्ष समझ के शमीकरण यथार्थ सिद्धांत उपलब्धि यथार्थ युग के आधार पर आधारित दृष्टिकोण",
+    "creator_statement": "Creator describes this moment as Nature honoring the viewpoint with a divine/supernatural white-light crown.",
+    "verification_status": "CREATOR_DECLARED_NOT_INDEPENDENTLY_VERIFIED"
+  },
+  "genesis_valuation": {
+    "mode": "UNPRICED_AT_GENESIS",
+    "initial_monetary_price": null,
+    "meaning": "YTH begins without an assigned monetary market price; any later exchange value, if legally permitted and actually established, must be determined by real market activity rather than a promised or administratively declared price."
+  },
+  "design_principles": [
+    "transparent",
+    "auditable",
+    "limited issuance",
+    "no hidden minting",
+    "provider-neutral",
+    "human-review-for-critical-actions"
+  ],
+  "supply": {
+    "model": "capped",
+    "max_units": "1000000000",
+    "decimals": 8,
+    "initial_mint": "0",
+    "minting": "disabled_by_default"
+  },
+  "accounting_unit": "1 YTH = 100000000 atomic units",
+  "allocation": {
+    "community_and_ecosystem": 0.4,
+    "creator_and_operations": 0.2,
+    "treasury": 0.15,
+    "development": 0.15,
+    "reserve": 0.1
+  },
+  "vesting_required": true,
+  "governance": "not defined in this prototype; no unilateral governance claims",
+  "transfer": "planned",
+  "network": "UNSELECTED",
+  "contract_status": "NOT_DEPLOYED",
+  "audit_status": "NOT_AUDITED",
+  "compliance_status": "REQUIRES_JURISDICTIONAL_REVIEW_BEFORE_LAUNCH",
+  "safeguards": [
+    "no guaranteed returns",
+    "no price target",
+    "no investment solicitation",
+    "testnet-first",
+    "public contract address only after verified deployment",
+    "independent security review before production"
+  ],
+  "ecosystem_links": {
+    "creative_studio": "../studio.html",
+    "products": "../products.html",
+    "income_hub": "../income-hub.html"
+  }
+}
