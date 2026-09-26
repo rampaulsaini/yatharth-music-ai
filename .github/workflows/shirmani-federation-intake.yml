@@ -45,8 +45,8 @@ jobs:
       - name: Build federation receipt and automission hand-off
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BRIEF: ${{ inputs.brief }}
-          FORMAT: ${{ inputs.format }}
+          BRIEF: ${{ github.event.client_payload.brief || inputs.brief }}
+          FORMAT: ${{ github.event.client_payload.format || inputs.format }}
           SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
           SOURCE_WORKFLOW: ${{ github.event.client_payload.source_workflow }}
           SOURCE_RUN_ID: ${{ github.event.client_payload.source_run_id }}
