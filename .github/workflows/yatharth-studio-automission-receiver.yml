@@ -31,6 +31,7 @@ jobs:
           AUTOMATION_MODE: ${{ github.event.client_payload.automation_mode }}
           BRIEF: ${{ github.event.client_payload.brief }}
           FORMAT: ${{ github.event.client_payload.format }}
+          RECEIPT_PATH: ${{ github.event.client_payload.receipt_path }}
         shell: bash
         run: |
           set -euo pipefail
@@ -69,6 +70,17 @@ jobs:
               if fmt not in allowed_formats:
                   fmt = "animated-film"
 
+          if requested_receipt_path:
+              if (not requested_receipt_path.startswith("automation/inbox/") or
+                  requested_receipt_path.startswith("/") or
+                  ".." in requested_receipt_path or
+                  "\\x00" in requested_receipt_path):
+                  raise SystemExit("Invalid receipt_path")
+              receipt_path = Path(requested_receipt_path)
+          else:
+              safe_id = re.sub(r"[^A-Za-z0-9_.-]", "-", source_run_id)
+              receipt_path = Path("automation/inbox") / f"yatharth-studio-request-{safe_id}.json"
+
           record = {
               "schema": "yatharth-studio-automission-handoff/v1",
               "status": "RECEIVED",
@@ -84,10 +96,8 @@ jobs:
               "format": fmt,
           }
 
-          safe_id = re.sub(r"[^A-Za-z0-9_.-]", "-", source_run_id)
-          path = Path("automation/inbox") / f"yatharth-studio-request-{safe_id}.json"
-          path.parent.mkdir(parents=True, exist_ok=True)
-          path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+          receipt_path.parent.mkdir(parents=True, exist_ok=True)
+          receipt_path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
           Path("federation-status.json").write_text(
               json.dumps(record, indent=2, ensure_ascii=False) + "\n",
@@ -95,7 +105,7 @@ jobs:
           )
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
-              out.write(f"path={path}\n")
+              out.write(f"path={receipt_path}\n")
               out.write(f"source_run_id={source_run_id}\n")
           PY
 
