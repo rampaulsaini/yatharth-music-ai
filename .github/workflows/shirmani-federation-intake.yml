@@ -124,8 +124,24 @@ jobs:
           git config user.name "Yatharth Automission"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add automation/inbox federation/inbox federation/outbox
-          git diff --cached --quiet || git commit -m "Record Shirmani creative studio automission hand-off"
-          git push
+          if git diff --cached --quiet; then
+            echo "No new federation hand-off files to commit."
+            exit 0
+          fi
+          git commit -m "Record Shirmani creative studio automission hand-off"
+
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              echo "Federation receipt published on attempt $attempt."
+              exit 0
+            fi
+            echo "Main branch moved during receipt publication; rebasing before retry ($attempt/5)."
+            git fetch origin main
+            git rebase origin/main
+          done
+
+          echo "Unable to publish federation receipt after 5 attempts." >&2
+          exit 1
 
       - name: Validate Creative Studio contract
         run: python scripts/validate-creative-studio.py
