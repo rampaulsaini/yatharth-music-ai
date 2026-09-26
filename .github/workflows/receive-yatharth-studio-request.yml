@@ -34,11 +34,11 @@ jobs:
             const sourceWorkflow = (process.env.SOURCE_WORKFLOW || '').trim();
             const format = (process.env.FORMAT || '').trim();
 
-            if (!/^\\d+$/.test(runId)) {
+            if (!/^\d+$/.test(runId)) {
               core.setFailed('Invalid source_run_id; receipt not written.');
               return;
             }
-            if (!/^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$/.test(sourceRepository)) {
+            if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(sourceRepository)) {
               core.setFailed('Invalid source_repository; receipt not written.');
               return;
             }
@@ -75,7 +75,7 @@ jobs:
 
             const path = `automation/inbox/yatharth-studio-request-${runId}.json`;
             const content = Buffer.from(
-              JSON.stringify(receipt, null, 2) + '\\n',
+              JSON.stringify(receipt, null, 2) + '\n',
               'utf8'
             ).toString('base64');
 
