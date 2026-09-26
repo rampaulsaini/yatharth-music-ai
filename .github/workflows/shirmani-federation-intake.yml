@@ -38,7 +38,14 @@ jobs:
           set -euo pipefail
           if [ "$EVENT_NAME" = "repository_dispatch" ]; then
             test "$SOURCE_REPOSITORY" = "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-"
-            test "$SOURCE_WORKFLOW" = "yatharth-creative-studio-bridge"
+            case "$SOURCE_WORKFLOW" in
+              "yatharth-creative-studio-bridge"|"SHIRMANI Inter-Repository Automission Orchestrator")
+                ;;
+              *)
+                echo "Unsupported federation source workflow: $SOURCE_WORKFLOW"
+                exit 1
+                ;;
+            esac
           fi
           echo "Approved federation source."
 
@@ -53,30 +60,36 @@ jobs:
           AUTOMATION_MODE: ${{ github.event.client_payload.automation_mode }}
         run: |
           set -euo pipefail
-          mkdir -p federation/inbox federation/outbox
+          mkdir -p federation/inbox federation/outbox automation/inbox
           export BRIEF FORMAT SOURCE_REPOSITORY SOURCE_WORKFLOW SOURCE_RUN_ID AUTOMATION_MODE EVENT_NAME GITHUB_RUN_ID
           python - <<'PY'
           import json, os, re
           from datetime import datetime, timezone
+          from pathlib import Path
+
           stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-          run_id = os.getenv("GITHUB_RUN_ID", "manual")
+          run_id = os.getenv("SOURCE_RUN_ID", "").strip() or os.getenv("GITHUB_RUN_ID", "manual")
           brief = os.getenv("BRIEF", "").strip()
           fmt = (os.getenv("FORMAT") or "animated-film").strip().lower()
           allowed = {"animated-film", "animated-short", "music-video", "story-film"}
+
           if not brief:
               raise SystemExit("Creative brief is required.")
           if len(brief) > 12000:
               raise SystemExit("Creative brief exceeds the 12000-character safety limit.")
           if fmt not in allowed:
               raise SystemExit(f"Unsupported production format: {fmt}")
+
           safe_mode = re.sub(r"[^A-Za-z0-9_.-]", "_", os.getenv("AUTOMATION_MODE") or "MANUAL")[:32]
+          source_run_id = re.sub(r"[^0-9A-Za-z_.-]", "-", run_id)
+
           payload = {
             "schema_version": 1,
-            "handoff_id": f"{stamp}-{run_id}",
+            "handoff_id": f"{stamp}-{source_run_id}",
             "received_at": datetime.now(timezone.utc).isoformat(),
             "source_repository": os.getenv("SOURCE_REPOSITORY") or "manual",
             "source_workflow": os.getenv("SOURCE_WORKFLOW") or "manual",
-            "source_run_id": os.getenv("SOURCE_RUN_ID") or "",
+            "source_run_id": run_id,
             "automation_mode": safe_mode,
             "brief": brief,
             "format": fmt,
@@ -91,10 +104,29 @@ jobs:
               "provider_neutral_adapters": True
             }
           }
-          with open(f"federation/inbox/{stamp}-{run_id}.json", "w", encoding="utf-8") as f:
+
+          with open(f"federation/inbox/{stamp}-{source_run_id}.json", "w", encoding="utf-8") as f:
               json.dump(payload, f, ensure_ascii=False, indent=2)
-          with open(f"federation/outbox/{stamp}-{run_id}.json", "w", encoding="utf-8") as f:
+          with open(f"federation/outbox/{stamp}-{source_run_id}.json", "w", encoding="utf-8") as f:
               json.dump({**payload, "status": "READY_FOR_STUDIO", "studio_route": "/studio.html"}, f, ensure_ascii=False, indent=2)
+
+          receipt = {
+            "schema": "yatharth-studio-automission-receipt/v1",
+            "status": "RECEIVED",
+            "independent_verification_claim": False,
+            "received_at_utc": datetime.now(timezone.utc).isoformat(),
+            "receiver_repository": os.getenv("GITHUB_REPOSITORY", ""),
+            "receiver_run_id": os.getenv("GITHUB_RUN_ID", ""),
+            "source_repository": os.getenv("SOURCE_REPOSITORY") or "manual",
+            "source_workflow": os.getenv("SOURCE_WORKFLOW") or "manual",
+            "source_run_id": run_id,
+            "automation_mode": safe_mode,
+            "brief": brief,
+            "format": fmt
+          }
+
+          receipt_path = Path("automation/inbox") / f"yatharth-studio-request-{source_run_id}.json"
+          receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
 
       - name: Commit intake receipt
@@ -102,8 +134,8 @@ jobs:
           set -euo pipefail
           git config user.name "Yatharth Automission"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add federation/inbox federation/outbox
-          git diff --cached --quiet || git commit -m "Record Shirmani creative studio automission hand-off"
+          git add automation/inbox federation/inbox federation/outbox
+          git diff --cached --quiet || git commit -m "fix(automission): align federation receiver receipt contract"
           git push
 
       - name: Validate Creative Studio contract
