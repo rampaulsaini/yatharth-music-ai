@@ -38,7 +38,10 @@ jobs:
           set -euo pipefail
           if [ "$EVENT_NAME" = "repository_dispatch" ]; then
             test "$SOURCE_REPOSITORY" = "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-"
-            test "$SOURCE_WORKFLOW" = "SHIRMANI Inter-Repository Automission Orchestrator"
+            case "$SOURCE_WORKFLOW" in
+              "SHIRMANI Inter-Repository Automission Orchestrator"|"yatharth-creative-studio-bridge") ;;
+              *) echo "Unapproved source workflow: $SOURCE_WORKFLOW"; exit 1 ;;
+            esac
           fi
           echo "Approved federation source."
 
