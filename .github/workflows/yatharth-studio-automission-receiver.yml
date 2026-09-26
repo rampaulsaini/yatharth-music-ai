@@ -1,0 +1,127 @@
+name: Yatharth Studio Automission Receiver
+
+on:
+  repository_dispatch:
+    types:
+      - yatharth_studio_request
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: yatharth-studio-receiver-${{ github.event.client_payload.source_run_id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  receive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate and persist handoff
+        id: handoff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
+          SOURCE_WORKFLOW: ${{ github.event.client_payload.source_workflow }}
+          SOURCE_RUN_ID: ${{ github.event.client_payload.source_run_id }}
+          AUTOMATION_MODE: ${{ github.event.client_payload.automation_mode }}
+          BRIEF: ${{ github.event.client_payload.brief }}
+          FORMAT: ${{ github.event.client_payload.format }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json, os, re
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          event_name = os.environ.get("EVENT_NAME", "")
+          source_repository = os.environ.get("SOURCE_REPOSITORY", "")
+          source_workflow = os.environ.get("SOURCE_WORKFLOW", "")
+          source_run_id = os.environ.get("SOURCE_RUN_ID", "")
+          automation_mode = os.environ.get("AUTOMATION_MODE", "") or "CONTINUOUS"
+          brief = os.environ.get("BRIEF", "")
+          fmt = os.environ.get("FORMAT", "") or "animated-film"
+
+          allowed_formats = {"animated-film", "animated-short", "music-video", "story-film"}
+
+          if event_name == "repository_dispatch":
+              if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", source_repository):
+                  raise SystemExit("Invalid source_repository")
+              if not source_run_id.isdigit():
+                  raise SystemExit("Invalid source_run_id")
+              if not source_workflow:
+                  raise SystemExit("Missing source_workflow")
+              if fmt not in allowed_formats:
+                  raise SystemExit(f"Unsupported format: {fmt}")
+              if not brief.strip():
+                  raise SystemExit("Missing brief")
+          else:
+              source_repository = source_repository or "manual"
+              source_workflow = source_workflow or "workflow_dispatch"
+              source_run_id = source_run_id or os.environ.get("GITHUB_RUN_ID", "")
+              brief = brief or "Manual receiver smoke test"
+              if fmt not in allowed_formats:
+                  fmt = "animated-film"
+
+          record = {
+              "schema": "yatharth-studio-automission-handoff/v1",
+              "status": "RECEIVED",
+              "independent_verification_claim": False,
+              "received_at_utc": datetime.now(timezone.utc).isoformat(),
+              "receiver_repository": os.environ.get("GITHUB_REPOSITORY", ""),
+              "receiver_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+              "source_repository": source_repository,
+              "source_workflow": source_workflow,
+              "source_run_id": source_run_id,
+              "automation_mode": automation_mode,
+              "brief": brief,
+              "format": fmt,
+          }
+
+          safe_id = re.sub(r"[^A-Za-z0-9_.-]", "-", source_run_id)
+          path = Path("automation/inbox") / f"yatharth-studio-request-{safe_id}.json"
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+          Path("federation-status.json").write_text(
+              json.dumps(record, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8"
+          )
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"path={path}\n")
+              out.write(f"source_run_id={source_run_id}\n")
+          PY
+
+      - name: Commit received handoff
+        if: github.event_name == 'repository_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add automation/inbox federation-status.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(automission): receive Yatharth Studio handoff"
+          git push origin HEAD:main
+
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yatharth-studio-automission-receipt-${{ github.run_id }}
+          path: federation-status.json
+          if-no-files-found: error
+
+      - name: Publish receipt summary
+        if: always()
+        run: |
+          echo "YATHARTH_AUTOMISSION_RECEIVED=true"
+          echo "SOURCE_RUN_ID=${{ steps.handoff.outputs.source_run_id }}"
+          echo "INDEPENDENT_VERIFICATION_CLAIM=false"
