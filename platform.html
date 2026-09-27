@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Yatharth Omniverse — music, creative studio, live media and creator commerce control plane.">
+<link rel="stylesheet" href="platform.css">
+<title>Yatharth Omniverse — Live Creative Platform</title>
+</head>
+<body>
+<header class="top"><div><span class="eyebrow">YATHARTH OMNIVERSE</span><h1>एक ही creative control plane</h1><p>Music • Studio • Live • Media • Games • Products • Offers</p></div><span id="health" class="pill">CHECKING</span></header>
+<main>
+<section class="hero"><span class="eyebrow">AI + HUMAN CREATIVE CONTROL</span><h2>संगीत से live production तक</h2><p>Provider-neutral architecture: उपलब्ध सेवा को live दिखाएँ, unavailable सेवा को साफ़ तौर पर degraded दिखाएँ।</p><div class="actions"><a href="/">🎵 Music AI</a><a href="/studio.html">🎬 Creative Studio</a><a href="/live.html">🔴 Live Hub</a><a href="/products.html">🛍️ Products</a></div></section>
+<section class="grid">
+<article><b>🎙️ Live Podcast</b><span>Scheduled / Live / Replay adapters</span></article>
+<article><b>📡 Live Streaming</b><span>Provider health + stream state</span></article>
+<article><b>🎥 Live Production</b><span>Scenes, cues, overlays and control</span></article>
+<article><b>📰 Live News</b><span>Licensed/provider feeds only</span></article>
+<article><b>🎮 Live Games</b><span>Game-session adapters and events</span></article>
+<article><b>🧸 Live Cartoon</b><span>Animation/live-programming slots</span></article>
+<article><b>🤖 Self-Healing</b><span>Health checks, retries, recovery and failover</span></article>
+<article><b>🧠 Self-Upgrading</b><span>Automated dependency PRs + tests + rollback</span></article>
+<article><b>🛒 Commerce</b><span>Products, offers and campaign inventory</span></article>
+</section>
+<section class="control"><h2>Runtime truth</h2><div id="runtime">Loading service state…</div><small>Public UI never claims a live provider is active without a successful provider health signal.</small></section>
+</main>
+<footer>Yatharth Omniverse • resilient, observable, provider-neutral</footer>
+<script>
+async function check(){try{const r=await fetch('/api/health',{cache:'no-store'}),d=await r.json();document.getElementById('health').textContent=d.engine_reachable?'AI ENGINE ONLINE':'AI ENGINE OFFLINE / DEGRADED';document.getElementById('health').className='pill '+(d.engine_reachable?'ok':'warn');document.getElementById('runtime').innerHTML='<b>API:</b> '+(d.ok?'online':'offline')+' · <b>AI:</b> '+(d.engine_reachable?'reachable':'unreachable')+' · <b>Active tasks:</b> '+d.active_tasks}catch(e){document.getElementById('health').textContent='API OFFLINE';document.getElementById('health').className='pill warn';document.getElementById('runtime').textContent='API unavailable; recovery/monitoring should handle the outage.'}}check();setInterval(check,15000);
+</script>
+</body></html>
