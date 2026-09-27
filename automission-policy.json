@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "principles": {
+    "durable_queue": true,
+    "restart_recovery": true,
+    "exponential_retry": true,
+    "provider_health": true,
+    "graceful_degradation": true,
+    "no_fabricated_live_claims": true,
+    "human_review_before_publication": true
+  },
+  "self_upgrade": {
+    "mode": "governed",
+    "allowed": ["propose", "test", "benchmark", "prepare_patch"],
+    "deployment": "signed-release-or-human-approved-only"
+  },
+  "live_network": {
+    "channels": ["live-news", "live-games", "live-cartoon", "live-podcast", "live-stream", "creator-series"],
+    "status_model": ["PLANNED", "READY", "CONNECTED", "LIVE", "ENDED", "BLOCKED"]
+  },
+  "promotion": {
+    "house_ads": true,
+    "external_ad_buying": "connector-required",
+    "social_publishing": "connector-required",
+    "frequency_capping": true,
+    "human_approval_for_paid_campaigns": true
+  },
+  "series": {
+    "continuity_ledger": true,
+    "character_bible": true,
+    "episode_numbering": true,
+    "recurring_generation": true,
+    "publication_gate": "human-review"
+  }
+}
