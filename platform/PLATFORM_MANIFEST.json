@@ -1,0 +1,27 @@
+{
+  "name": "Yatharth Music AI Platform",
+  "version": "1.0",
+  "audience_capacity_target": 850,
+  "availability_goal": "24/7/365",
+  "guarantee": "best-effort automatic recovery; no software-only guarantee of zero downtime",
+  "layers": {
+    "public_interface": ["music", "creative-studio", "creator-economy", "live-production-hub"],
+    "runtime": ["api", "readiness-gate", "task-queue", "gpu-workers", "object-storage"],
+    "automation": ["health-monitor", "bounded-retry", "failover-routing", "idempotency", "recovery-log"],
+    "intelligence": ["quality-review", "upgrade-proposals", "regression-tests", "human-approval-gate"]
+  },
+  "live_features": {
+    "live_podcast": {"status": "interface-ready", "provider_required": true},
+    "live_streaming": {"status": "interface-ready", "provider_required": true},
+    "live_production": {"status": "interface-ready", "provider_required": true},
+    "live_news": {"status": "provider-and-editorial-feed-required", "verification_required": true},
+    "live_games": {"status": "provider-required", "verification_required": true},
+    "live_cartoon": {"status": "content-pipeline-required", "rights_required": true},
+    "store_ads": {"status": "catalog-feed-required", "user_control_required": true}
+  },
+  "upgrade_policy": {
+    "mode": "proposal-first",
+    "automatic_production_code_changes": false,
+    "required_gates": ["tests", "security", "rollback-plan", "human-approval"]
+  }
+}
