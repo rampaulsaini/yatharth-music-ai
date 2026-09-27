@@ -1,0 +1,39 @@
+name: Yatharth Runtime Smoke
+on:
+  push:
+    branches: [main]
+    paths: ["main.py","runtime/**",".github/workflows/runtime-smoke.yml"]
+  pull_request:
+    paths: ["main.py","runtime/**",".github/workflows/runtime-smoke.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Compile runtime
+        env:
+          MPLBACKEND: Agg
+        run: python -m compileall -q main.py
+      - name: Validate headless import
+        env:
+          MPLBACKEND: Agg
+        run: python -c "import matplotlib; print(matplotlib.get_backend()); import main; print('runtime import OK')"
+      - name: API smoke
+        env:
+          DEMO_MODE: "true"
+          MPLBACKEND: Agg
+        run: |
+          python -m uvicorn main:app --host 127.0.0.1 --port 8000 >/tmp/yatharth.log 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in {1..30}; do curl -fsS http://127.0.0.1:8000/api/health && break || sleep 1; done
+          curl -fsS http://127.0.0.1:8000/api/ready
