@@ -42,6 +42,14 @@ def test_health():
     assert body["demo_mode"] is True
 
 
+def test_readiness_probe_in_demo_mode():
+    response = client.get("/api/ready")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ready"] is True
+    assert body["demo_mode"] is True
+
+
 def test_generate_poll_audio_and_delete():
     response = client.post("/api/generate", json={"prompt": "uplifting cinematic song"})
     assert response.status_code == 200
