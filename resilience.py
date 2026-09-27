@@ -76,6 +76,13 @@ def save_task(task: Any) -> None:
            task.engine_file, getattr(task, "attempts", 0), getattr(task, "next_attempt", 0)),
         )
 
+def load_task(task_id: str) -> dict[str, Any] | None:
+    init_state()
+    with _lock, _connect() as db:
+        row = db.execute("SELECT * FROM tasks WHERE task_id=?", (task_id,)).fetchone()
+    return dict(row) if row else None
+
+
 def load_tasks() -> list[dict[str, Any]]:
     init_state()
     with _lock, _connect() as db:
