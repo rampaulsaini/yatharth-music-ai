@@ -19,6 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
+from resilience import delete_task, init_state, load_tasks, mark_provider, provider_snapshot, recover_inflight, save_task
+
 load_dotenv()
 
 DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
@@ -31,6 +33,8 @@ RATE_LIMIT = max(1, int(os.getenv("RATE_LIMIT_PER_MINUTE", "10")))
 MAX_TASKS = max(100, int(os.getenv("MAX_TASKS_IN_MEMORY", "2000")))
 MAX_RATE_CLIENTS = max(100, int(os.getenv("MAX_RATE_LIMIT_CLIENTS", "10000")))
 MAX_REQUEST_BYTES = max(4096, int(os.getenv("MAX_REQUEST_BYTES", "32768")))
+ENGINE_RETRY_LIMIT = max(1, int(os.getenv("ENGINE_RETRY_LIMIT", "20")))
+ENGINE_RETRY_BASE_SECONDS = max(1, int(os.getenv("ENGINE_RETRY_BASE_SECONDS", "5")))
 ROOT = Path(__file__).resolve().parent
 
 app = FastAPI(title="Yatharth Music AI API", version="3.0.1", docs_url="/api/docs", redoc_url="/api/redoc")
@@ -72,12 +76,42 @@ class Task:
         self.created = time.time()
         self.engine_task_id: Optional[str] = None
         self.engine_file: Optional[str] = None
+        self.attempts = 0
+        self.next_attempt = 0.0
 
 tasks: dict[str, Task] = {}
 engine_slots = asyncio.Semaphore(MAX_CONCURRENT)
 rate_windows: dict[str, deque[float]] = defaultdict(deque)
 LANG_MAP = {"Hindi": "hi", "Punjabi": "pa", "English": "en", "Sanskrit": "sa", "Urdu": "ur", "Bengali": "bn"}
 VOICE_MAP = {"Male": "male", "Female": "female", "Duet": "duet", "Instrumental": "instrumental"}
+
+init_state()
+
+def persist(task: Task) -> None:
+    save_task(task)
+
+def restore_persistent_tasks() -> None:
+    recover_inflight()
+    for row in load_tasks():
+        if row["status"] not in {"queued", "waiting_engine", "processing"}:
+            continue
+        try:
+            task = Task(GenerateRequest.model_validate(json.loads(row["request_json"])), row["client_id"])
+            task.id = row["task_id"]; task.status = "queued"; task.progress = row["progress"]
+            task.audio_url = row["audio_url"]; task.metadata = json.loads(row["metadata_json"] or "{}")
+            task.error = row["error"]; task.created = row["created"]; task.engine_task_id = row["engine_task_id"]; task.engine_file = row["engine_file"]
+            task.attempts = row["attempts"]; task.next_attempt = row["next_attempt"]
+            tasks[task.id] = task
+        except Exception:
+            continue
+
+@app.on_event("startup")
+async def resilience_startup():
+    restore_persistent_tasks()
+    if not DEMO_MODE:
+        for task in list(tasks.values()):
+            if task.status in {"queued", "waiting_engine", "processing"}:
+                asyncio.create_task(run_engine_task(task))
 
 
 def client_id(request: Request) -> str:
@@ -179,7 +213,7 @@ async def health():
                 reachable = response.status_code < 500
         except Exception:
             reachable = False
-    return {"ok": True, "version": app.version, "demo_mode": DEMO_MODE, "engine_url_configured": bool(ENGINE_URL), "engine_reachable": reachable, "active_tasks": sum(t.status in {"queued", "processing"} for t in tasks.values()), "max_concurrent": MAX_CONCURRENT}
+    return {"ok": True, "version": app.version, "demo_mode": DEMO_MODE, "engine_url_configured": bool(ENGINE_URL), "engine_reachable": reachable, "provider": provider_snapshot(), "active_tasks": sum(t.status in {"queued", "processing", "waiting_engine"} for t in tasks.values()), "max_concurrent": MAX_CONCURRENT, "durable_state": True}
 
 
 @app.get("/api/ready")
@@ -203,6 +237,10 @@ async def ready():
     return {"ready": True, "demo_mode": False, "engine_reachable": True}
 
 
+@app.get("/api/resilience")
+async def resilience_status():
+    return {"durable_state": True, "state_db": str(DB_PATH if "DB_PATH" in globals() else "configured"), "provider": provider_snapshot(), "retry_limit": ENGINE_RETRY_LIMIT, "recovery_on_restart": True, "self_healing": True, "self_upgrade_policy": "signed-release-or-human-approved-update-only"}
+
 @app.get("/api/config")
 async def config():
     return {"languages": list(LANG_MAP), "formats": ["mp3", "wav", "flac"], "max_duration": 300, "demo_mode": DEMO_MODE}
@@ -216,6 +254,7 @@ async def generate(request: GenerateRequest, http_request: Request):
     prune_tasks()
     task = Task(request, cid)
     tasks[task.id] = task
+    persist(task)
     if DEMO_MODE:
         task.status = "completed"
         task.progress = 100
@@ -253,52 +292,73 @@ async def random_sample(http_request: Request):
 
 async def run_engine_task(task: Task):
     async with engine_slots:
-        task.status = "processing"
-        request = task.request
-        payload: dict[str, Any] = {"prompt": build_prompt(request), "lyrics": "" if request.instrumental or request.voice == "Instrumental" else request.lyrics, "thinking": True, "vocal_language": LANG_MAP.get(request.language, "en"), "audio_duration": request.duration, "audio_format": request.format}
-        if request.instrumental or request.voice == "Instrumental":
-            payload["prompt"] += ", instrumental"
-        if request.bpm is not None:
-            payload["bpm"] = request.bpm
-        if request.key:
-            payload["key_scale"] = request.key
-        if request.time_signature:
-            payload["time_signature"] = request.time_signature
-        try:
-            created = unwrap_data(await engine_post("/release_task", payload))
-            engine_id = created.get("task_id") if isinstance(created, dict) else None
-            if not engine_id:
-                raise RuntimeError(f"ACE-Step did not return task_id: {created}")
-            task.engine_task_id = str(engine_id)
-            started = time.time()
-            while time.time() - started < POLL_TIMEOUT:
-                await asyncio.sleep(POLL_SECONDS)
-                result = unwrap_data(await engine_post("/query_result", {"task_id_list": [engine_id]}))
-                if not result:
-                    continue
-                item = result[0] if isinstance(result, list) else result
-                status = item.get("status", 0) if isinstance(item, dict) else 0
-                task.progress = min(95, max(5, int(((time.time() - started) / POLL_TIMEOUT) * 95)))
-                if status == 2:
-                    raise RuntimeError(str(item.get("error") or item.get("result") or "ACE-Step generation failed"))
-                if status == 1:
-                    parsed = parse_result(item.get("result"))
-                    first = parsed[0] if isinstance(parsed, list) and parsed else parsed
-                    if not isinstance(first, dict):
-                        raise RuntimeError("ACE-Step returned an unexpected result")
-                    file_path = first.get("file") or first.get("audio_path") or first.get("url")
-                    if not file_path:
-                        raise RuntimeError("ACE-Step returned success without an audio file")
-                    task.engine_file = str(file_path)
-                    task.metadata = first.get("metas", {}) or {}
-                    task.status = "completed"
-                    task.progress = 100
-                    task.audio_url = str(file_path) if str(file_path).startswith(("http://", "https://")) else f"/api/audio/{task.id}"
+        while task.attempts < ENGINE_RETRY_LIMIT:
+            if task.next_attempt > time.time():
+                await asyncio.sleep(min(task.next_attempt - time.time(), 30))
+            task.attempts += 1
+            task.status = "processing"
+            task.error = None
+            persist(task)
+            request = task.request
+            payload: dict[str, Any] = {"prompt": build_prompt(request), "lyrics": "" if request.instrumental or request.voice == "Instrumental" else request.lyrics, "thinking": True, "vocal_language": LANG_MAP.get(request.language, "en"), "audio_duration": request.duration, "audio_format": request.format}
+            if request.instrumental or request.voice == "Instrumental":
+                payload["prompt"] += ", instrumental"
+            if request.bpm is not None:
+                payload["bpm"] = request.bpm
+            if request.key:
+                payload["key_scale"] = request.key
+            if request.time_signature:
+                payload["time_signature"] = request.time_signature
+            try:
+                created = unwrap_data(await engine_post("/release_task", payload))
+                mark_provider("ace-step", True)
+                engine_id = created.get("task_id") if isinstance(created, dict) else None
+                if not engine_id:
+                    raise RuntimeError(f"ACE-Step did not return task_id: {created}")
+                task.engine_task_id = str(engine_id)
+                persist(task)
+                started = time.time()
+                while time.time() - started < POLL_TIMEOUT:
+                    await asyncio.sleep(POLL_SECONDS)
+                    result = unwrap_data(await engine_post("/query_result", {"task_id_list": [engine_id]}))
+                    if not result:
+                        continue
+                    item = result[0] if isinstance(result, list) else result
+                    status = item.get("status", 0) if isinstance(item, dict) else 0
+                    task.progress = min(95, max(5, int(((time.time() - started) / POLL_TIMEOUT) * 95)))
+                    persist(task)
+                    if status == 2:
+                        raise RuntimeError(str(item.get("error") or item.get("result") or "ACE-Step generation failed"))
+                    if status == 1:
+                        parsed = parse_result(item.get("result"))
+                        first = parsed[0] if isinstance(parsed, list) and parsed else parsed
+                        if not isinstance(first, dict):
+                            raise RuntimeError("ACE-Step returned an unexpected result")
+                        file_path = first.get("file") or first.get("audio_path") or first.get("url")
+                        if not file_path:
+                            raise RuntimeError("ACE-Step returned success without an audio file")
+                        task.engine_file = str(file_path)
+                        task.metadata = first.get("metas", {}) or {}
+                        task.status = "completed"
+                        task.progress = 100
+                        task.audio_url = str(file_path) if str(file_path).startswith(("http://", "https://")) else f"/api/audio/{task.id}"
+                        persist(task)
+                        return
+                raise TimeoutError("Generation timed out")
+            except Exception as exc:
+                mark_provider("ace-step", False, str(exc))
+                task.error = str(exc)
+                if task.attempts >= ENGINE_RETRY_LIMIT:
+                    task.status = "paused"
+                    task.next_attempt = 0
+                    persist(task)
                     return
-            raise TimeoutError("Generation timed out")
-        except Exception as exc:
-            task.status = "failed"
-            task.error = str(exc)
+                task.status = "waiting_engine"
+                task.next_attempt = time.time() + min(300, ENGINE_RETRY_BASE_SECONDS * (2 ** min(task.attempts - 1, 6)))
+                persist(task)
+                await asyncio.sleep(min(task.next_attempt - time.time(), 30))
+        task.status = "paused"
+        persist(task)
 
 
 @app.get("/api/tasks/{task_id}")
@@ -321,6 +381,7 @@ async def delete_task(task_id: str, http_request: Request):
     if task.client_id != cid:
         raise HTTPException(403, "not allowed")
     tasks.pop(task_id, None)
+    delete_task(task_id)
     return {"ok": True}
 
 
