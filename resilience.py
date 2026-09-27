@@ -46,6 +46,10 @@ def init_state() -> None:
           next_attempt REAL NOT NULL DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS idx_tasks_status_next ON tasks(status, next_attempt);
+        try:
+            db.execute("ALTER TABLE tasks ADD COLUMN engine_provider TEXT")
+        except sqlite3.OperationalError:
+            pass
         CREATE TABLE IF NOT EXISTS provider_health (
           provider TEXT PRIMARY KEY,
           ok INTEGER NOT NULL DEFAULT 0,
@@ -60,7 +64,7 @@ def save_task(task: Any) -> None:
     with _lock, _connect() as db:
         db.execute(
           """INSERT INTO tasks(task_id,client_id,request_json,status,progress,audio_url,metadata_json,error,created,updated,engine_task_id,engine_file,engine_provider,attempts,next_attempt)
-             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
              ON CONFLICT(task_id) DO UPDATE SET client_id=excluded.client_id,request_json=excluded.request_json,status=excluded.status,
              progress=excluded.progress,audio_url=excluded.audio_url,metadata_json=excluded.metadata_json,error=excluded.error,
              updated=excluded.updated,engine_task_id=excluded.engine_task_id,engine_file=excluded.engine_file,engine_provider=excluded.engine_provider,attempts=excluded.attempts,next_attempt=excluded.next_attempt""",
