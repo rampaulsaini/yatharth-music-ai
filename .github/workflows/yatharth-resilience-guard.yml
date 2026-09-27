@@ -1,0 +1,39 @@
+name: Yatharth Resilience Guard
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: pip install pytest
+      - run: python -m compileall main.py resilience.py tests
+      - run: pytest -q tests
+      - name: Optional deployed health check
+        if: ${{ vars.YATHARTH_HEALTH_URL != '' }}
+        env:
+          HEALTH_URL: ${{ vars.YATHARTH_HEALTH_URL }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          url=os.environ["HEALTH_URL"].rstrip("/")+"/api/health"
+          with urllib.request.urlopen(url, timeout=15) as r:
+              data=json.load(r)
+          assert data.get("ok") is True, data
+          print(json.dumps(data, indent=2))
+          PY
