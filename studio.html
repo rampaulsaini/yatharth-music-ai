@@ -8,4 +8,32 @@
 <section class="run-section" id="productionRun"><div class="section-title"><div><span class="kicker">LIVE PRODUCTION RUN</span><h2>Automission Control Center</h2></div><span class="run-badge" id="runBadge">IDLE</span></div><div class="run-grid"><div class="run-card"><div class="run-line"><span>Run ID</span><b id="runId">—</b></div><div class="run-progress"><div id="runProgressBar"></div></div><div class="run-summary"><span id="runProgressText">0 / 7 stages</span><span id="runMode">READY</span></div><div id="stageList" class="stage-list"><div class="empty">Start a production run to see the seven-agent hand-off.</div></div></div><div class="run-card"><div class="panel-head"><h3>Artifacts</h3><button class="ghost" id="downloadManifest" disabled>Export Manifest</button></div><div id="artifactList" class="artifact-list"><div class="empty">No run artifacts yet.</div></div><div class="review-gate" id="reviewGate"><b>Human Review Gate</b><span>Publication remains review-required until a human approves the production package.</span></div></div></div></section><section class="section" id="pipeline"><div class="section-title"><div><span class="kicker">AUTOMISSION PIPELINE</span><h2>Idea → Finished Film</h2></div><p>Each stage has a specialist role and a traceable hand-off.</p></div><div class="pipeline"><div class="node"><span>01</span><b>Story Architect</b><small>Logline • script • dialogue</small></div><div class="arrow">→</div><div class="node"><span>02</span><b>Character Director</b><small>Cast • look • continuity</small></div><div class="arrow">→</div><div class="node"><span>03</span><b>Storyboard Agent</b><small>Scenes • shots • camera</small></div><div class="arrow">→</div><div class="node"><span>04</span><b>Music Composer</b><small>Lyrics • score • vocals</small></div><div class="arrow">→</div><div class="node"><span>05</span><b>Animation Planner</b><small>Motion • timing • assets</small></div><div class="arrow">→</div><div class="node"><span>06</span><b>Film Editor</b><small>Assembly • QC • delivery</small></div></div></section>
 <section class="section" id="agents"><div class="section-title"><div><span class="kicker">SPECIALIST NETWORK</span><h2>AI Agent Control Room</h2></div><p>Provider-neutral orchestration: connect approved models later without changing the studio UI.</p></div><div class="agents"><article><b>🎼 Music Agent</b><span>Yatharth / ACE-Step adapter</span><i>READY</i></article><article><b>✍️ Story Agent</b><span>Script & dialogue planner</span><i>READY</i></article><article><b>🎨 Character Agent</b><span>Character bible & asset prompts</span><i>READY</i></article><article><b>🎞️ Shot Agent</b><span>Storyboard & camera continuity</span><i>READY</i></article><article><b>🌀 Animation Agent</b><span>Motion/scene production plan</span><i>READY</i></article><article><b>🧪 QC Agent</b><span>Continuity, rights & delivery checks</span><i>READY</i></article></div></section>
 <section class="section" id="projects"><div class="section-title"><div><span class="kicker">PROJECT MEMORY</span><h2>My Productions</h2></div><button class="ghost" id="clearProjects">Clear local projects</button></div><div id="projectsList" class="projects"><div class="empty">No saved production projects yet.</div></div></section>
-<footer>Yatharth Creative Studio • Music + Animation + Film Production Hub • <a href="/">Music</a> • <a href="/creator-hub.html">Creator & Economic Hub</a> • <a href="/products.html">Digital Products</a> • <a href="/live.html">Live Hub</a></footer></div><script src="studio.js"></script></body></html>
+<footer>Yatharth Creative Studio • Music + Animation + Film Production Hub • <a href="/">Music</a> • <a href="/creator-hub.html">Creator & Economic Hub</a> • <a href="/products.html">Digital Products</a> • <a href="/live.html">Live Hub</a></footer></div><script src="studio.js"></script>
+<section id="selfHealingPanel" class="panel" aria-labelledby="selfHealingTitle">
+  <div class="section-kicker">YATHARTH AUTOMICSSION</div>
+  <h2 id="selfHealingTitle">Self-Healing Control Plane</h2>
+  <p>Live health, readiness, provider state and safe recovery visibility. No false-success state is shown.</p>
+  <div class="studio-grid">
+    <div><strong id="liveState">Checking…</strong><small>API liveness</small></div>
+    <div><strong id="engineState">Checking…</strong><small>Music engine</small></div>
+    <div><strong id="readyState">Checking…</strong><small>Generation readiness</small></div>
+  </div>
+  <button id="refreshHealth" class="ghost" type="button">Refresh system health</button>
+  <span id="healthUpdated" aria-live="polite"></span>
+</section>
+<script>
+(async function(){
+  const q=id=>document.getElementById(id);
+  async function refresh(){
+    try{
+      const r=await fetch('/api/health',{cache:'no-store'}), d=await r.json();
+      q('liveState').textContent=d.ok?'ONLINE':'OFFLINE';
+      q('engineState').textContent=d.demo_mode?'DEMO':(d.engine_reachable?'ONLINE':'OFFLINE');
+      q('readyState').textContent=d.ready_for_generation?'READY':'WAITING FOR ENGINE';
+      q('healthUpdated').textContent=' Updated '+new Date().toLocaleTimeString();
+    }catch(e){q('liveState').textContent='UNREACHABLE';q('engineState').textContent='UNKNOWN';q('readyState').textContent='RECOVERY';}
+  }
+  q('refreshHealth').onclick=refresh; await refresh(); setInterval(refresh,15000);
+})();
+</script>
+</body></html>
