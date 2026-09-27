@@ -1,0 +1,48 @@
+name: Yatharth Resilience Smoke
+
+on:
+  push:
+    branches: ["main", "feat/omniverse-resilient-studio-20260927"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+  schedule:
+    - cron: "23 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yatharth-resilience-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python compile
+        run: python -m compileall -q main.py
+      - name: Workflow YAML parse
+        run: |
+          python - <<'PY'
+          import pathlib, yaml
+          for p in pathlib.Path(".github/workflows").glob("*.y*ml"):
+              data = yaml.safe_load(p.read_text(encoding="utf-8"))
+              if not isinstance(data, dict) or "jobs" not in data:
+                  raise SystemExit(f"invalid workflow: {p}")
+          print("WORKFLOW_YAML=PASS")
+          PY
+      - name: Production safety assertions
+        run: |
+          grep -q 'MPLBACKEND.*Agg' docker-compose.production.yml
+          grep -q 'restart: unless-stopped' docker-compose.production.yml
+          grep -q '/api/ready' main.py
+          grep -q 'human_review_before_publication' main.py
+          echo "PRODUCTION_SAFETY=PASS"
+      - name: Public interface assets
+        run: |
+          test -s platform.html
+          test -s platform.css
+          echo "PUBLIC_INTERFACE=PASS"
