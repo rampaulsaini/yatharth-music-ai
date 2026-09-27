@@ -20,7 +20,7 @@ a{color:#fff;text-decoration:none}.actions{display:flex;flex-wrap:wrap;gap:10px}
 <a class="button primary" href="/">🎵 Music Studio</a>
 <a class="button" href="/studio.html">🎬 Creative Studio</a>
 <a class="button" href="/control-room.html">🧠 Automission Control</a>
-<a class="button" href="/creator-hub.html">💼 Creator Hub</a>
+<a class="button" href="/creator-hub.html">💼 Creator Hub</a><a class="button" href="/live.html">🔴 Live Hub</a>
 </div>
 </section>
 
@@ -45,6 +45,20 @@ a{color:#fff;text-decoration:none}.actions{display:flex;flex-wrap:wrap;gap:10px}
 </section>
 
 <section class="card" style="margin-top:14px">
+<h2>🧠 AI/ML continuous improvement</h2><div class="grid">
+<div><span class="status ready">OBSERVE</span><p class="muted">Runtime errors, latency, queue depth and generation outcomes become structured learning signals.</p></div>
+<div><span class="status ready">TEST</span><p class="muted">Candidate code/model/config changes are tested in isolation before production.</p></div>
+<div><span class="status ready">RECOVER</span><p class="muted">Unhealthy workers restart; idempotent jobs replay; exhausted jobs enter a dead-letter path.</p></div>
+<div><span class="status ready">ROLLBACK</span><p class="muted">Immutable releases can be canaried, monitored and rolled back without rewriting production in place.</p></div>
+</div>
+</section>
+<section class="card" style="margin-top:14px">
+<h2>♾️ Perpetual episode engine</h2><p class="muted">Episode ID → previous-episode reference → world/character state → script → assets → QC → provider receipt → next episode. Every episode remains bounded and independently recoverable.</p>
+</section>
+<section class="card" style="margin-top:14px">
+<h2>💰 Campaign & offer loop</h2><p class="muted">Product → campaign → creative variants → schedule → provider delivery → verified response. Creating an ad is never treated as proof of delivery, audience or revenue.</p>
+</section>
+<section class="card" style="margin-top:14px">
 <h2>24/7 boundary</h2>
 <p class="muted">Software can automate detection, retry, recovery and failover, but no software-only design can honestly guarantee that hardware, power, network or an external provider will never fail. Production continuity therefore uses independent infrastructure and a second provider/worker.</p>
 </section>
@@ -61,6 +75,6 @@ async function load(){
   $('detail').textContent='Provider: '+(h.provider?.provider||'unknown')+' · active tasks: '+h.active_tasks+' · retry limit: '+r.retry_limit+' · recovery on restart: '+r.recovery_on_restart;
  }catch(e){$('detail').textContent='Runtime status unavailable.'}
 }
-function $(id){return document.getElementById(id)} load();setInterval(load,30000);
+function $(id){return document.getElementById(id)} load();setInterval(load,15000);
 </script>
 </main></body></html>
