@@ -31,3 +31,22 @@ def test_recovery_marks_interrupted_work():
         assert resilience.recover_inflight()==1
         assert resilience.load_tasks()[0]["status"]=="queued"
     resilience.DB_PATH=old
+
+
+def test_idempotency_key_round_trip():
+    import resilience
+    old = resilience.DB_PATH
+    with tempfile.TemporaryDirectory() as tmp:
+        resilience.DB_PATH = Path(tmp) / "state.sqlite3"
+        resilience.init_state()
+        class R:
+            id="idem-1"; client_id="client-1"; idempotency_key="request-123"
+            request=type("Req",(),{"model_dump_json":lambda self:'{"prompt":"x"}'})()
+            status="queued"; progress=0; audio_url=None; metadata={}; error=None; created=1.0
+            engine_task_id=None; engine_file=None; attempts=0; next_attempt=0
+        resilience.save_task(R())
+        found = resilience.find_task_by_idempotency("client-1", "request-123")
+        assert found is not None
+        assert found["task_id"] == "idem-1"
+        assert resilience.find_task_by_idempotency("client-2", "request-123") is None
+    resilience.DB_PATH=old
