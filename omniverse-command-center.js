@@ -1,0 +1,10 @@
+const $=id=>document.getElementById(id);
+async function health(){try{const r=await fetch("/api/health",{cache:"no-store"});const d=await r.json();$("healthState").textContent=d.engine_reachable?"LIVE":"DEGRADED";$("healthText").textContent=d.engine_reachable?"AI engine reachable; durable queue active.":"Public control plane is alive; GPU engine is unavailable, so generation is safely degraded."}catch(e){$("healthState").textContent="OFFLINE";$("healthText").textContent="Control plane unreachable."}}
+const channelCopy={podcast:"🎙️ Podcast live surface — connect an approved stream provider here.",studio:"🎬 Production monitor — queue, agents and current render status.",news:"📰 News surface — source-labelled feeds only; editorial publication remains reviewable.",games:"🎮 Games surface — approved interactive channels can be embedded here.",cartoon:"🧸 Cartoon surface — scheduled episodes and family programming.",music:"🎵 Yatharth Music AI — open the music studio to generate or manage music."};
+document.querySelectorAll("[data-channel]").forEach(b=>b.onclick=()=>{$("player").textContent=channelCopy[b.dataset.channel]});
+$("refresh").onclick=health;
+$("startEpisode").onclick=()=>{$("episodeTitle").textContent="Episode "+String(Date.now()).slice(-3)+" — नया अध्याय";$("episodeText").textContent="Continuity brief created. Next stage: human-reviewable story, music, visual and publishing plan."};
+$("nextEpisode").onclick=()=>{localStorage.setItem("yatharth_next_episode",new Date().toISOString());alert("Episode brief queued locally. Connect the production API to dispatch it to durable workers.")};
+$("manifest").onclick=()=>{const data={product:"Yatharth Omniverse",created_at:new Date().toISOString(),status:"PLANNED",review_required:true};const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));a.download="yatharth-episode-manifest.json";a.click()};
+$("offer").onclick=()=>alert("Offer surface ready. Add approved product-catalog data before publishing commercial claims.");
+health();setInterval(health,30000);
