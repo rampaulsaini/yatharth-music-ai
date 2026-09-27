@@ -21,3 +21,15 @@ If `nvidia-smi` is unavailable, the free runtime has no NVIDIA GPU at that momen
 
 ## Permanent-service rule
 Colab + a temporary trycloudflare URL is a test environment, not permanent hosting. Production requires a durable compute provider, persistent storage, queueing, health checks and a fallback provider.
+
+
+## Current Colab failure guard
+If ACE-Step fails before binding port 8001 with a Matplotlib backend error such as `ValueError: Key backend: 'module://matplotlib_inline.backend_inline'`, clear the notebook-only backend before starting the server:
+
+```python
+import os
+os.environ.pop("MPLBACKEND", None)
+os.environ["MPLBACKEND"] = "Agg"
+```
+
+Run that cell **before** launching ACE-Step. This is a startup-environment issue, not a Cloudflare tunnel failure. The Yatharth API can remain live while the engine is unavailable; readiness should stay 503 until the engine health endpoint responds.

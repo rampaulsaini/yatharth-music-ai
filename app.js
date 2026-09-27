@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 const API = window.location.protocol === 'file:' ? 'http://127.0.0.1:8000' : '';
-const state = { timer: null, history: JSON.parse(localStorage.getItem('yatharth_history') || '[]') };
+const state = { timer: null, healthTimer: null, history: JSON.parse(localStorage.getItem('yatharth_history') || '[]') };
 
 function setStatus(text, kind='') { const el = $('status'); el.textContent = text; el.className = `status ${kind}`; }
 function escapeHtml(s='') { return String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
@@ -12,6 +12,25 @@ function renderHistory() {
   if (!state.history.length) { el.textContent = 'No generated songs yet.'; return; }
   el.innerHTML = state.history.slice(0, 20).map((x) => `<div class="history-item"><div><strong>${escapeHtml(x.title)}</strong><small>${escapeHtml(x.language)} · ${escapeHtml(x.genre)} · ${escapeHtml(x.voice)}</small></div><button data-url="${escapeAttr(x.url)}" type="button">Play</button></div>`).join('');
   el.querySelectorAll('button').forEach(b => b.onclick = () => { $('player').src = b.dataset.url; $('download').href = b.dataset.url; $('result').classList.remove('hidden'); $('player').play().catch(()=>{}); });
+}
+
+async function checkResilience() {
+  try {
+    const [h, r] = await Promise.all([fetch(`${API}/api/health`), fetch(`${API}/api/resilience`)]);
+    const health = await h.json(), resilience = await r.json();
+    const provider = resilience.provider || {};
+    const online = !health.demo_mode && health.engine_reachable;
+    $('modeBadge').textContent = health.demo_mode ? 'DEMO MODE' : (online ? 'AI ENGINE READY' : 'ENGINE OFFLINE');
+    $('modeBadge').classList.toggle('live', online);
+    $('resilienceBadge').textContent = health.demo_mode ? 'DEMO' : (online ? 'ONLINE' : 'RECOVERING');
+    $('resilienceBadge').classList.toggle('live', online);
+    $('providerState').textContent = `Provider: ${provider.ok ? 'READY' : 'OFFLINE'}`;
+    $('providerDetail').textContent = provider.last_error ? `Auto-recovery active · ${provider.failures || 0} recent failures` : 'Durable queue + recovery';
+    $('resilienceText').textContent = resilience.auto_recovery ? 'Durable queue, restart recovery और continuous provider watchdog सक्रिय हैं।' : 'Durable queue और restart recovery सक्रिय हैं।';
+  } catch {
+    $('resilienceBadge').textContent = 'UNREACHABLE';
+    $('resilienceText').textContent = 'Control API अभी उपलब्ध नहीं है; durable work को server-side state में रखा जाता है।';
+  }
 }
 
 async function checkHealth() {
@@ -80,4 +99,4 @@ $('clear').onclick = () => { $('prompt').value=''; $('lyrics').value=''; count('
 $('clearHistory').onclick = () => { state.history=[]; localStorage.removeItem('yatharth_history'); renderHistory(); };
 $('prompt').addEventListener('input', () => count('prompt','promptCount'));
 $('lyrics').addEventListener('input', () => count('lyrics','lyricsCount'));
-checkHealth(); renderHistory(); count('prompt','promptCount'); count('lyrics','lyricsCount');
+checkHealth(); checkResilience(); state.healthTimer = setInterval(checkResilience, 15000); renderHistory(); count('prompt','promptCount'); count('lyrics','lyricsCount');
