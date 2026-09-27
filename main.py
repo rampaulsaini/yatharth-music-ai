@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
-from resilience import delete_task as durable_delete_task, init_state, load_tasks, mark_provider, provider_snapshot, recover_inflight, save_task
+from resilience import delete_task as durable_delete_task, find_task_by_idempotency, init_state, load_tasks, mark_provider, provider_snapshot, recover_inflight, save_task
 
 load_dotenv()
 
@@ -78,6 +78,7 @@ class Task:
         self.engine_file: Optional[str] = None
         self.attempts = 0
         self.next_attempt = 0.0
+        self.idempotency_key: Optional[str] = None
 
 tasks: dict[str, Task] = {}
 engine_slots = asyncio.Semaphore(MAX_CONCURRENT)
@@ -100,7 +101,7 @@ def restore_persistent_tasks() -> None:
             task.id = row["task_id"]; task.status = "queued"; task.progress = row["progress"]
             task.audio_url = row["audio_url"]; task.metadata = json.loads(row["metadata_json"] or "{}")
             task.error = row["error"]; task.created = row["created"]; task.engine_task_id = row["engine_task_id"]; task.engine_file = row["engine_file"]
-            task.attempts = row["attempts"]; task.next_attempt = row["next_attempt"]
+            task.attempts = row["attempts"]; task.next_attempt = row["next_attempt"]; task.idempotency_key = row.get("idempotency_key")
             tasks[task.id] = task
         except Exception:
             continue
@@ -251,10 +252,31 @@ async def generate(request: GenerateRequest, http_request: Request):
     cid = enforce_rate_limit(http_request)
     if not request.prompt.strip() and not request.lyrics.strip() and not request.instrumental:
         raise HTTPException(400, "prompt or lyrics is required")
+    idempotency_key = http_request.headers.get("Idempotency-Key", "").strip()
+    if len(idempotency_key) > 200:
+        raise HTTPException(400, "Idempotency-Key must be 200 characters or fewer")
+    if idempotency_key:
+        existing = find_task_by_idempotency(cid, idempotency_key)
+        if existing:
+            return {
+                "task_id": existing["task_id"],
+                "status": existing["status"],
+                "demo": DEMO_MODE,
+                "idempotent_replay": True,
+            }
     prune_tasks()
     task = Task(request, cid)
+    task.idempotency_key = idempotency_key or None
     tasks[task.id] = task
-    persist(task)
+    try:
+        persist(task)
+    except Exception as exc:
+        tasks.pop(task.id, None)
+        if idempotency_key:
+            existing = find_task_by_idempotency(cid, idempotency_key)
+            if existing:
+                return {"task_id": existing["task_id"], "status": existing["status"], "demo": DEMO_MODE, "idempotent_replay": True}
+        raise HTTPException(503, f"Could not durably register generation task: {exc}") from exc
     if DEMO_MODE:
         task.status = "completed"
         task.progress = 100
