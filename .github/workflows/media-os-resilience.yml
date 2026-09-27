@@ -1,0 +1,30 @@
+name: Yatharth Media OS Resilience Gate
+on:
+  push:
+    branches: [main]
+    paths: ["main.py","resilience.py","media-os.html","studio.*","live.html","control-room.html",".github/workflows/media-os-resilience.yml"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt pytest
+      - run: python -m compileall main.py resilience.py
+      - run: pytest -q
+      - name: Static public-interface checks
+        run: |
+          test -s media-os.html
+          grep -q "/api/health" media-os.html
+          grep -q "/api/resilience" media-os.html
+          grep -q "SELF-UPGRADE" media-os.html
+          grep -q "Live Network" media-os.html
