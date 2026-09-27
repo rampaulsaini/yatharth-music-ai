@@ -1,0 +1,102 @@
+name: Production Resilience Guard
+
+on:
+  push:
+    branches: ["main", "feat/**"]
+    paths:
+      - "24_7_PRODUCTION.md"
+      - "FREE_DEPLOYMENT.md"
+      - "colab/**"
+      - "main.py"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - ".github/workflows/**"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "24_7_PRODUCTION.md"
+      - "FREE_DEPLOYMENT.md"
+      - "colab/**"
+      - "main.py"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-resilience-guard-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python compile smoke
+        run: python3 -m compileall -q main.py
+
+      - name: Validate production resilience contract
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+          import re
+
+          required_doc_terms = [
+              "durable task",
+              "PostgreSQL",
+              "durable queue",
+              "GPU worker pool",
+              "object storage",
+              "automatic replacement",
+              "idempotency",
+              "failover",
+          ]
+          doc = Path("24_7_PRODUCTION.md").read_text(encoding="utf-8")
+          missing = [term for term in required_doc_terms if term.lower() not in doc.lower()]
+          if missing:
+              raise SystemExit("24_7_PRODUCTION.md missing resilience terms: " + ", ".join(missing))
+
+          forbidden_guarantees = [
+              r"guarantee[s]?\s+24/7",
+              r"never\s+fail",
+              r"100%\s+uptime",
+              r"zero[- ]failure",
+          ]
+          for path in [Path("24_7_PRODUCTION.md"), Path("FREE_DEPLOYMENT.md")]:
+              text = path.read_text(encoding="utf-8")
+              for pattern in forbidden_guarantees:
+                  if re.search(pattern, text, flags=re.IGNORECASE):
+                      raise SystemExit(f"{path}: prohibited uptime/failure guarantee wording: {pattern}")
+
+          notebook = Path("colab/Yatharth_Music_AI_Free_GPU.ipynb")
+          if notebook.exists():
+              data = json.loads(notebook.read_text(encoding="utf-8"))
+              source = "\n".join(
+                  "".join(cell.get("source", []))
+                  for cell in data.get("cells", [])
+                  if cell.get("cell_type") == "code"
+              )
+              required_runtime_guards = [
+                  "MPLBACKEND",
+                  "Agg",
+                  "ACE-Step did not become healthy",
+                  "DEMO_MODE",
+                  "MUSIC_ENGINE_URL",
+              ]
+              missing = [term for term in required_runtime_guards if term not in source]
+              if missing:
+                  raise SystemExit("Colab startup contract missing: " + ", ".join(missing))
+
+          main = Path("main.py").read_text(encoding="utf-8")
+          for required in ["/api/health", "/api/ready", "MAX_CONCURRENT_GENERATIONS"]:
+              if required not in main:
+                  raise SystemExit(f"main.py missing resilience boundary: {required}")
+
+          print("PRODUCTION_RESILIENCE_CONTRACT=PASS")
