@@ -52,6 +52,14 @@ def init_state() -> None:
           failures INTEGER NOT NULL DEFAULT 0,
           last_error TEXT
         );
+        CREATE TABLE IF NOT EXISTS idempotency_keys (
+          client_id TEXT NOT NULL,
+          idem_key TEXT NOT NULL,
+          task_id TEXT NOT NULL,
+          created REAL NOT NULL,
+          PRIMARY KEY (client_id, idem_key)
+        );
+        CREATE INDEX IF NOT EXISTS idx_idempotency_task ON idempotency_keys(task_id);
         """)
 
 def save_task(task: Any) -> None:
@@ -103,3 +111,28 @@ def recover_inflight() -> int:
           (now, now),
         )
     return cur.rowcount
+
+
+def find_idempotent_task(client_id: str, idem_key: str) -> str | None:
+    """Return the previously bound task for a client/key pair, if any."""
+    init_state()
+    with _lock, _connect() as db:
+        row = db.execute(
+            "SELECT task_id FROM idempotency_keys WHERE client_id=? AND idem_key=?",
+            (client_id, idem_key),
+        ).fetchone()
+    return str(row["task_id"]) if row else None
+
+
+def bind_idempotency(client_id: str, idem_key: str, task_id: str) -> bool:
+    """Atomically bind an idempotency key; False means another request won the race."""
+    init_state()
+    try:
+        with _lock, _connect() as db:
+            db.execute(
+                "INSERT INTO idempotency_keys(client_id,idem_key,task_id,created) VALUES(?,?,?,?)",
+                (client_id, idem_key, task_id, time.time()),
+            )
+        return True
+    except sqlite3.IntegrityError:
+        return False
