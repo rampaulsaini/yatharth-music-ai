@@ -35,6 +35,8 @@ MAX_RATE_CLIENTS = max(100, int(os.getenv("MAX_RATE_LIMIT_CLIENTS", "10000")))
 MAX_REQUEST_BYTES = max(4096, int(os.getenv("MAX_REQUEST_BYTES", "32768")))
 ENGINE_RETRY_LIMIT = max(1, int(os.getenv("ENGINE_RETRY_LIMIT", "20")))
 ENGINE_RETRY_BASE_SECONDS = max(1, int(os.getenv("ENGINE_RETRY_BASE_SECONDS", "5")))
+AUTO_RECOVERY_ENABLED = os.getenv("AUTO_RECOVERY_ENABLED", "true").lower() == "true"
+RECOVERY_POLL_SECONDS = max(10, int(os.getenv("RECOVERY_POLL_SECONDS", "30")))
 ROOT = Path(__file__).resolve().parent
 
 app = FastAPI(title="Yatharth Music AI API", version="3.0.1", docs_url="/api/docs", redoc_url="/api/redoc")
@@ -105,13 +107,63 @@ def restore_persistent_tasks() -> None:
         except Exception:
             continue
 
+recovery_watchdog_task: Optional[asyncio.Task] = None
+
+async def _engine_reachable() -> bool:
+    if DEMO_MODE:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.get(f"{ENGINE_URL}/health", headers=headers())
+            ok = response.status_code < 500
+            mark_provider("ace-step", ok, None if ok else f"HTTP {response.status_code}")
+            return ok
+    except Exception as exc:
+        mark_provider("ace-step", False, str(exc))
+        return False
+
+async def _recovery_watchdog():
+    """Recover durable work when the provider disappears and returns."""
+    while True:
+        try:
+            if await _engine_reachable():
+                for task in list(tasks.values()):
+                    if task.status in {"queued", "waiting_engine"} and task.next_attempt <= time.time():
+                        asyncio.create_task(run_engine_task(task))
+                    elif task.status == "paused" and task.attempts >= ENGINE_RETRY_LIMIT:
+                        task.status = "queued"
+                        task.attempts = 0
+                        task.error = "Automatically recovered after provider became reachable"
+                        task.next_attempt = 0
+                        persist(task)
+                        asyncio.create_task(run_engine_task(task))
+            await asyncio.sleep(RECOVERY_POLL_SECONDS)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            await asyncio.sleep(RECOVERY_POLL_SECONDS)
+
 @app.on_event("startup")
 async def resilience_startup():
+    global recovery_watchdog_task
     restore_persistent_tasks()
     if not DEMO_MODE:
         for task in list(tasks.values()):
             if task.status in {"queued", "waiting_engine", "processing"}:
                 asyncio.create_task(run_engine_task(task))
+        if AUTO_RECOVERY_ENABLED:
+            recovery_watchdog_task = asyncio.create_task(_recovery_watchdog())
+
+@app.on_event("shutdown")
+async def resilience_shutdown():
+    global recovery_watchdog_task
+    if recovery_watchdog_task:
+        recovery_watchdog_task.cancel()
+        try:
+            await recovery_watchdog_task
+        except asyncio.CancelledError:
+            pass
+        recovery_watchdog_task = None
 
 
 def client_id(request: Request) -> str:
@@ -239,7 +291,19 @@ async def ready():
 
 @app.get("/api/resilience")
 async def resilience_status():
-    return {"durable_state": True, "state_db": str(DB_PATH if "DB_PATH" in globals() else "configured"), "provider": provider_snapshot(), "retry_limit": ENGINE_RETRY_LIMIT, "recovery_on_restart": True, "self_healing": True, "self_upgrade_policy": "signed-release-or-human-approved-update-only"}
+    provider = provider_snapshot()
+    return {
+        "durable_state": True,
+        "state_db": str(DB_PATH if "DB_PATH" in globals() else "configured"),
+        "provider": provider,
+        "retry_limit": ENGINE_RETRY_LIMIT,
+        "recovery_on_restart": True,
+        "auto_recovery": AUTO_RECOVERY_ENABLED,
+        "recovery_poll_seconds": RECOVERY_POLL_SECONDS,
+        "self_healing": True,
+        "self_upgrade_policy": "signed-release-or-human-approved-update-only",
+        "fail_safe_when_provider_offline": True,
+    }
 
 @app.get("/api/config")
 async def config():
