@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
-from resilience import delete_task as durable_delete_task, init_state, load_tasks, mark_provider, provider_snapshot, recover_inflight, save_task
+from resilience import bind_idempotency, delete_task as durable_delete_task, find_idempotent_task, init_state, load_task as durable_load_task, load_tasks, mark_provider, provider_snapshot, recover_inflight, save_task
 
 load_dotenv()
 
@@ -251,8 +251,31 @@ async def generate(request: GenerateRequest, http_request: Request):
     cid = enforce_rate_limit(http_request)
     if not request.prompt.strip() and not request.lyrics.strip() and not request.instrumental:
         raise HTTPException(400, "prompt or lyrics is required")
+    idem_key = http_request.headers.get("Idempotency-Key", "").strip()
+    if len(idem_key) > 200:
+        raise HTTPException(400, "Idempotency-Key is too long")
+    if idem_key:
+        existing_id = find_idempotent_task(cid, idem_key)
+        if existing_id:
+            if existing_id not in tasks:
+                row = durable_load_task(existing_id)
+                if row:
+                    restore_persistent_tasks()
+            existing = tasks.get(existing_id)
+            if existing:
+                return {"task_id": existing.id, "status": existing.status, "demo": DEMO_MODE, "idempotent_replay": True}
+            raise HTTPException(409, "Idempotency key is bound to a task that is no longer recoverable")
     prune_tasks()
     task = Task(request, cid)
+    if idem_key and not bind_idempotency(cid, idem_key, task.id):
+        existing_id = find_idempotent_task(cid, idem_key)
+        if existing_id:
+            if existing_id not in tasks:
+                restore_persistent_tasks()
+            existing = tasks.get(existing_id)
+            if existing:
+                return {"task_id": existing.id, "status": existing.status, "demo": DEMO_MODE, "idempotent_replay": True}
+        raise HTTPException(409, "Idempotency race could not be resolved safely")
     tasks[task.id] = task
     persist(task)
     if DEMO_MODE:
