@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
-from resilience import init_state, load_tasks, mark_provider, provider_snapshot, recover_inflight, save_task
+from resilience import delete_task, init_state, load_tasks, mark_provider, provider_snapshot, recover_inflight, save_task
 
 load_dotenv()
 
@@ -381,6 +381,7 @@ async def delete_task(task_id: str, http_request: Request):
     if task.client_id != cid:
         raise HTTPException(403, "not allowed")
     tasks.pop(task_id, None)
+    delete_task(task_id)
     return {"ok": True}
 
 
