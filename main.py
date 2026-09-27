@@ -179,7 +179,7 @@ async def health():
                 reachable = response.status_code < 500
         except Exception:
             reachable = False
-    return {"ok": True, "version": app.version, "demo_mode": DEMO_MODE, "engine_url_configured": bool(ENGINE_URL), "engine_reachable": reachable, "active_tasks": sum(t.status in {"queued", "processing"} for t in tasks.values()), "max_concurrent": MAX_CONCURRENT}
+    return {"ok": DEMO_MODE or reachable, "version": app.version, "demo_mode": DEMO_MODE, "engine_url_configured": bool(ENGINE_URL), "engine_reachable": reachable, "active_tasks": sum(t.status in {"queued", "processing"} for t in tasks.values()), "max_concurrent": MAX_CONCURRENT}
 
 
 @app.get("/api/config")
