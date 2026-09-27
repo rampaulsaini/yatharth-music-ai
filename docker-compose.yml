@@ -35,6 +35,9 @@ services:
               capabilities: [gpu]
     environment:
       NVIDIA_VISIBLE_DEVICES: all
+      # ACE-Step is a headless server. Never inherit Colab/Jupyter matplotlib UI state.
+      MPLBACKEND: Agg
+      TOKENIZERS_PARALLELISM: "false"
       ACESTEP_MODE: api
       ACESTEP_API_KEY: ${ACESTEP_API_KEY:-}
       ACESTEP_INIT_SERVICE: ${ACESTEP_INIT_SERVICE:-true}
