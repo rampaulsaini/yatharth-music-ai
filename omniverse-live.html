@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Yatharth Omniverse — live media, AI production, music, podcast, games, stories and commerce control plane.">
+<title>Yatharth Omniverse — Live Control Plane</title>
+<style>
+:root{color-scheme:dark;--bg:#071018;--panel:#0d1b26;--line:#1c3344;--text:#eff7ff;--muted:#9db3c4;--accent:#7de7c7;--warn:#ffd27d}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at top,#123047 0,#071018 48%);color:var(--text)}
+main{max-width:1200px;margin:auto;padding:22px}.top{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:20px}.eyebrow{color:var(--accent);font-weight:700;letter-spacing:.12em;text-transform:uppercase}.sub{color:var(--muted);max-width:760px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:rgba(13,27,38,.88);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 12px 40px #0004}.card h2{margin:0 0 8px;font-size:1.1rem}.status{display:inline-flex;padding:5px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-size:.8rem}.ready{color:var(--accent)}.soon{color:var(--warn)}button{border:1px solid var(--line);background:#102535;color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer}.hero{margin:16px 0 22px;padding:24px;border:1px solid #2a4b60;border-radius:24px;background:linear-gradient(135deg,#102a3b,#0b1721)}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}.feed{min-height:130px;display:grid;place-items:center;border:1px dashed #315166;border-radius:14px;margin-top:12px;color:var(--muted)}footer{margin-top:25px;color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+<section class="top"><div><div class="eyebrow">Yatharth Omniverse</div><h1>Live • Create • Produce • Learn • Share</h1><p class="sub">एक unified public control plane: music, podcast, live media, creative production, stories, games, commerce and bounded AI automation.</p></div><span id="health" class="status">checking…</span></section>
+<section class="hero"><h2>Automission Control</h2><p class="sub">Self-service और bounded self-healing controls यहाँ से दिखाई देते हैं। Production actions तभी live दिखेंगे जब वास्तविक provider/adapter healthy हो।</p><div class="controls"><button onclick="location.href='studio.html'">Creative Studio</button><button onclick="location.href='live.html'">Live Media</button><button onclick="location.href='products.html'">Digital Store</button><button onclick="location.href='index.html'">Music AI</button></div></section>
+<section class="grid" id="modules"></section>
+<footer>Live claims, news, games, ads, streams और viewer metrics are provider-backed only. Human/authorized gates remain for publication, paid promotion and rights-sensitive actions.</footer>
+</main>
+<script>
+const modules=[
+["🎵","AI Music","Prompt → song → metadata → delivery","/index.html","ready"],
+["🎙️","Live Podcast","Live audio production and publishing adapter","/live.html","soon"],
+["📡","Live Streaming","Broadcast control, scenes and CDN hand-off","/live.html","soon"],
+["🎬","Live Production","Story → storyboard → animation → edit → QC","/studio.html","ready"],
+["📰","Live News","Provider-backed feeds only; no fabricated news","/live.html","soon"],
+["🎮","Live Games","Game/session adapter with real-time state","/live.html","soon"],
+["🧸","Cartoon & Film","AI-assisted character/story/animation pipeline","/studio.html","ready"],
+["🛍️","Product Ads","Offer → creative → placement → delivery evidence","/products.html","ready"],
+["🧠","Self-Healing","Health → retry → requeue → isolate → recover","/studio.html","ready"],
+["🔬","Self-Upgrading","Proposal → CI → review gate → rollout → rollback","/studio.html","ready"],
+["📚","Evergreen Episodes","Continuing story engine with versioned episodes","/studio.html","ready"],
+["🌐","Federation","Cross-repository automation with auditable receipts","/studio.html","ready"]
+];
+document.getElementById("modules").innerHTML=modules.map(([i,n,d,u,s])=>'<article class="card"><div style="font-size:1.7rem">'+i+'</div><h2>'+n+'</h2><p class="sub">'+d+'</p><span class="status '+(s==="ready"?"ready":"soon")+'">'+(s==="ready"?"adapter available":"provider required")+'</span><div class="controls"><button onclick="location.href=\''+u+'\'">Open</button></div></article>').join("");
+fetch("/api/health").then(r=>r.json()).then(x=>{document.getElementById("health").textContent=x.ok?"API online":"API degraded";document.getElementById("health").className="status "+(x.ok?"ready":"soon")}).catch(()=>{document.getElementById("health").textContent="API offline";document.getElementById("health").className="status soon"});
+</script>
+</body>
+</html>

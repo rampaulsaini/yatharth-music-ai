@@ -1,0 +1,93 @@
+name: Yatharth Resilience Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Compile runtime
+        run: python -m compileall main.py tests scripts
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Validate production contracts
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for p in [
+              Path("production-manifest.json"),
+              Path("federation/creative-studio-contract.json"),
+          ]:
+              json.loads(p.read_text(encoding="utf-8"))
+              print("valid:", p)
+          PY
+
+      - name: Verify no notebook-only matplotlib backend is committed
+        run: |
+          if grep -R "module://matplotlib_inline" -n . --exclude-dir=.git; then
+            echo "Notebook-only matplotlib backend detected in repository sources."
+            exit 1
+          fi
+
+      - name: Verify Colab startup contract
+        run: |
+          test -f colab/Yatharth_Music_AI_Free_GPU.ipynb
+          python - <<'PY'
+          import json
+          p="colab/Yatharth_Music_AI_Free_GPU.ipynb"
+          data=json.load(open(p, encoding="utf-8"))
+          text="\n".join("".join(c.get("source", [])) for c in data["cells"])
+          assert "MPLBACKEND" in text and "Agg" in text
+          assert "/health" in text
+          print("Colab startup gate: OK")
+          PY
+
+      - name: Produce audit summary
+        run: |
+          mkdir -p audit
+          cat > audit/resilience-audit.json <<'JSON'
+          {
+            "schema_version": 1,
+            "checks": [
+              "compileall",
+              "pytest",
+              "json-contracts",
+              "headless-matplotlib-guard",
+              "colab-startup-health-gate"
+            ],
+            "production_uptime_guarantee": false,
+            "note": "Infrastructure availability still depends on persistent compute, network, storage and provider capacity."
+          }
+          JSON
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yatharth-resilience-audit
+          path: audit/resilience-audit.json
