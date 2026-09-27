@@ -24,7 +24,8 @@ from resilience import delete_task as durable_delete_task, init_state, load_task
 load_dotenv()
 
 DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
-ENGINE_URL = os.getenv("MUSIC_ENGINE_URL", "http://127.0.0.1:8001").rstrip("/")
+ENGINE_URLS = [u.rstrip("/") for u in os.getenv("MUSIC_ENGINE_URLS", os.getenv("MUSIC_ENGINE_URL", "http://127.0.0.1:8001")).split(",") if u.strip()]
+ENGINE_URL = ENGINE_URLS[0] if ENGINE_URLS else "http://127.0.0.1:8001"
 API_KEY = os.getenv("ACESTEP_API_KEY", "").strip()
 POLL_SECONDS = max(0.5, float(os.getenv("POLL_SECONDS", "2")))
 POLL_TIMEOUT = max(30, int(os.getenv("POLL_TIMEOUT_SECONDS", "300")))
@@ -76,6 +77,7 @@ class Task:
         self.created = time.time()
         self.engine_task_id: Optional[str] = None
         self.engine_file: Optional[str] = None
+        self.engine_provider: Optional[str] = None
         self.attempts = 0
         self.next_attempt = 0.0
 
@@ -99,7 +101,7 @@ def restore_persistent_tasks() -> None:
             task = Task(GenerateRequest.model_validate(json.loads(row["request_json"])), row["client_id"])
             task.id = row["task_id"]; task.status = "queued"; task.progress = row["progress"]
             task.audio_url = row["audio_url"]; task.metadata = json.loads(row["metadata_json"] or "{}")
-            task.error = row["error"]; task.created = row["created"]; task.engine_task_id = row["engine_task_id"]; task.engine_file = row["engine_file"]
+            task.error = row["error"]; task.created = row["created"]; task.engine_task_id = row["engine_task_id"]; task.engine_file = row["engine_file"]; task.engine_provider = row.get("engine_provider")
             task.attempts = row["attempts"]; task.next_attempt = row["next_attempt"]
             tasks[task.id] = task
         except Exception:
@@ -153,11 +155,22 @@ def build_prompt(request: GenerateRequest) -> str:
     return ", ".join(parts)
 
 
-async def engine_post(path: str, payload: dict[str, Any]) -> Any:
+async def engine_post(path: str, payload: dict[str, Any], provider: Optional[str] = None) -> tuple[Any, str]:
+    providers = [provider] if provider else ENGINE_URLS
+    last_error: Optional[Exception] = None
     async with httpx.AsyncClient(timeout=90) as client:
-        response = await client.post(f"{ENGINE_URL}{path}", json=payload, headers=headers())
-        response.raise_for_status()
-        return response.json()
+        for base_url in providers:
+            if not base_url:
+                continue
+            try:
+                response = await client.post(f"{base_url}{path}", json=payload, headers=headers())
+                response.raise_for_status()
+                mark_provider(base_url, True)
+                return response.json(), base_url
+            except Exception as exc:
+                last_error = exc
+                mark_provider(base_url, False, str(exc))
+    raise RuntimeError(f"All music providers unavailable: {last_error}")
 
 
 def unwrap_data(value: Any) -> Any:
@@ -209,11 +222,17 @@ async def health():
     if not DEMO_MODE:
         try:
             async with httpx.AsyncClient(timeout=5) as client:
-                response = await client.get(f"{ENGINE_URL}/health", headers=headers())
-                reachable = response.status_code < 500
+                for provider_url in ENGINE_URLS:
+                    try:
+                        response = await client.get(f"{provider_url}/health", headers=headers())
+                        if response.status_code < 500:
+                            reachable = True
+                            break
+                    except Exception:
+                        continue
         except Exception:
             reachable = False
-    return {"ok": True, "version": app.version, "demo_mode": DEMO_MODE, "engine_url_configured": bool(ENGINE_URL), "engine_reachable": reachable, "provider": provider_snapshot(), "active_tasks": sum(t.status in {"queued", "processing", "waiting_engine"} for t in tasks.values()), "max_concurrent": MAX_CONCURRENT, "durable_state": True}
+    return {"ok": True, "version": app.version, "demo_mode": DEMO_MODE, "engine_url_configured": bool(ENGINE_URLS), "engine_providers": ENGINE_URLS, "engine_reachable": reachable, "providers": {u: provider_snapshot(u) for u in ENGINE_URLS}, "active_tasks": sum(t.status in {"queued", "processing", "waiting_engine"} for t in tasks.values()), "max_concurrent": MAX_CONCURRENT, "durable_state": True}
 
 
 @app.get("/api/ready")
@@ -224,8 +243,14 @@ async def ready():
     reachable = False
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            response = await client.get(f"{ENGINE_URL}/health", headers=headers())
-            reachable = response.status_code < 500
+            for provider_url in ENGINE_URLS:
+                try:
+                    response = await client.get(f"{provider_url}/health", headers=headers())
+                    if response.status_code < 500:
+                        reachable = True
+                        break
+                except Exception:
+                    continue
     except Exception:
         reachable = False
     if not reachable:
@@ -239,7 +264,7 @@ async def ready():
 
 @app.get("/api/resilience")
 async def resilience_status():
-    return {"durable_state": True, "state_db": str(DB_PATH if "DB_PATH" in globals() else "configured"), "provider": provider_snapshot(), "retry_limit": ENGINE_RETRY_LIMIT, "recovery_on_restart": True, "self_healing": True, "self_upgrade_policy": "signed-release-or-human-approved-update-only"}
+    return {"durable_state": True, "state_db": str(DB_PATH if "DB_PATH" in globals() else "configured"), "providers": {u: provider_snapshot(u) for u in ENGINE_URLS}, "provider_count": len(ENGINE_URLS), "retry_limit": ENGINE_RETRY_LIMIT, "recovery_on_restart": True, "self_healing": True, "self_upgrade_policy": "signed-release-or-human-approved-update-only"}
 
 @app.get("/api/config")
 async def config():
@@ -272,7 +297,8 @@ async def format_input(payload: dict[str, Any], http_request: Request):
         text = str(payload.get("prompt") or payload.get("caption") or "").strip()
         return {"ok": True, "text": text}
     try:
-        result = unwrap_data(await engine_post("/format_input", payload))
+        raw, _ = await engine_post("/format_input", payload)
+        result = unwrap_data(raw)
         return {"ok": True, "data": result}
     except Exception as exc:
         raise HTTPException(502, f"Music engine format-input failed: {exc}") from exc
@@ -284,7 +310,8 @@ async def random_sample(http_request: Request):
     if DEMO_MODE:
         return {"ok": True, "data": {"caption": "cinematic uplifting original song, warm piano, strings, modern drums", "lyrics": ""}}
     try:
-        result = unwrap_data(await engine_post("/create_random_sample", {}))
+        raw, _ = await engine_post("/create_random_sample", {})
+        result = unwrap_data(raw)
         return {"ok": True, "data": result}
     except Exception as exc:
         raise HTTPException(502, f"Music engine random-sample failed: {exc}") from exc
@@ -310,17 +337,19 @@ async def run_engine_task(task: Task):
             if request.time_signature:
                 payload["time_signature"] = request.time_signature
             try:
-                created = unwrap_data(await engine_post("/release_task", payload))
-                mark_provider("ace-step", True)
+                created_raw, provider = await engine_post("/release_task", payload)
+                created = unwrap_data(created_raw)
                 engine_id = created.get("task_id") if isinstance(created, dict) else None
                 if not engine_id:
                     raise RuntimeError(f"ACE-Step did not return task_id: {created}")
                 task.engine_task_id = str(engine_id)
+                task.engine_provider = provider
                 persist(task)
                 started = time.time()
                 while time.time() - started < POLL_TIMEOUT:
                     await asyncio.sleep(POLL_SECONDS)
-                    result = unwrap_data(await engine_post("/query_result", {"task_id_list": [engine_id]}))
+                    result_raw, _ = await engine_post("/query_result", {"task_id_list": [engine_id]}, task.engine_provider)
+                    result = unwrap_data(result_raw)
                     if not result:
                         continue
                     item = result[0] if isinstance(result, list) else result
@@ -346,7 +375,8 @@ async def run_engine_task(task: Task):
                         return
                 raise TimeoutError("Generation timed out")
             except Exception as exc:
-                mark_provider("ace-step", False, str(exc))
+                for provider_url in ENGINE_URLS:
+                    mark_provider(provider_url, False, str(exc))
                 task.error = str(exc)
                 if task.attempts >= ENGINE_RETRY_LIMIT:
                     task.status = "paused"

@@ -41,10 +41,15 @@ def init_state() -> None:
           updated REAL NOT NULL,
           engine_task_id TEXT,
           engine_file TEXT,
+          engine_provider TEXT,
           attempts INTEGER NOT NULL DEFAULT 0,
           next_attempt REAL NOT NULL DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS idx_tasks_status_next ON tasks(status, next_attempt);
+        try:
+            db.execute("ALTER TABLE tasks ADD COLUMN engine_provider TEXT")
+        except sqlite3.OperationalError:
+            pass
         CREATE TABLE IF NOT EXISTS provider_health (
           provider TEXT PRIMARY KEY,
           ok INTEGER NOT NULL DEFAULT 0,
@@ -58,11 +63,11 @@ def save_task(task: Any) -> None:
     now = time.time()
     with _lock, _connect() as db:
         db.execute(
-          """INSERT INTO tasks(task_id,client_id,request_json,status,progress,audio_url,metadata_json,error,created,updated,engine_task_id,engine_file,attempts,next_attempt)
-             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          """INSERT INTO tasks(task_id,client_id,request_json,status,progress,audio_url,metadata_json,error,created,updated,engine_task_id,engine_file,engine_provider,attempts,next_attempt)
+             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
              ON CONFLICT(task_id) DO UPDATE SET client_id=excluded.client_id,request_json=excluded.request_json,status=excluded.status,
              progress=excluded.progress,audio_url=excluded.audio_url,metadata_json=excluded.metadata_json,error=excluded.error,
-             updated=excluded.updated,engine_task_id=excluded.engine_task_id,engine_file=excluded.engine_file,attempts=excluded.attempts,next_attempt=excluded.next_attempt""",
+             updated=excluded.updated,engine_task_id=excluded.engine_task_id,engine_file=excluded.engine_file,engine_provider=excluded.engine_provider,attempts=excluded.attempts,next_attempt=excluded.next_attempt""",
           (task.id, task.client_id, task.request.model_dump_json(), task.status, task.progress, task.audio_url,
            json.dumps(task.metadata, ensure_ascii=False), task.error, task.created, now, task.engine_task_id,
            task.engine_file, getattr(task, "attempts", 0), getattr(task, "next_attempt", 0)),
