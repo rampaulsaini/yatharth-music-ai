@@ -182,6 +182,27 @@ async def health():
     return {"ok": True, "version": app.version, "demo_mode": DEMO_MODE, "engine_url_configured": bool(ENGINE_URL), "engine_reachable": reachable, "active_tasks": sum(t.status in {"queued", "processing"} for t in tasks.values()), "max_concurrent": MAX_CONCURRENT}
 
 
+@app.get("/api/ready")
+async def ready():
+    """Readiness probe: liveness stays green, but real-AI traffic is gated on engine reachability."""
+    if DEMO_MODE:
+        return {"ready": True, "demo_mode": True, "engine_reachable": False}
+    reachable = False
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.get(f"{ENGINE_URL}/health", headers=headers())
+            reachable = response.status_code < 500
+    except Exception:
+        reachable = False
+    if not reachable:
+        return Response(
+            content=json.dumps({"ready": False, "demo_mode": False, "engine_reachable": False}),
+            status_code=503,
+            media_type="application/json",
+        )
+    return {"ready": True, "demo_mode": False, "engine_reachable": True}
+
+
 @app.get("/api/config")
 async def config():
     return {"languages": list(LANG_MAP), "formats": ["mp3", "wav", "flac"], "max_duration": 300, "demo_mode": DEMO_MODE}
