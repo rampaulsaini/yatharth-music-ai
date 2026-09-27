@@ -32,7 +32,9 @@ The repository includes a ready-to-run free GPU notebook that starts **ACE-Step 
 
 https://colab.research.google.com/github/rampaulsaini/yatharth-music-ai/blob/main/colab/Yatharth_Music_AI_Free_GPU.ipynb
 
-The notebook uses a temporary Cloudflare Tunnel link. No Hugging Face account is required for this development/test route. The link and GPU runtime stop when the Colab runtime stops, so this is not permanent hosting.
+The notebook explicitly forces a headless matplotlib backend (Agg) before ACE-Step starts, preventing Colab's matplotlib_inline backend from crashing the ACE-Step server. It also waits for the engine health endpoint before exposing the public test link. No Hugging Face account is required for this development/test route. The link and GPU runtime stop when the Colab runtime stops, so this is not permanent hosting.
+
+For the permanent architecture and 24/7 production boundary, see [`24_7_PRODUCTION.md`](./24_7_PRODUCTION.md).
 
 ## Local development
 
