@@ -74,6 +74,10 @@ def load_tasks() -> list[dict[str, Any]]:
         rows = db.execute("SELECT * FROM tasks ORDER BY created DESC").fetchall()
     return [dict(row) for row in rows]
 
+def delete_task(task_id: str) -> None:
+    with _lock, _connect() as db:
+        db.execute("DELETE FROM tasks WHERE task_id=?", (task_id,))
+
 def mark_provider(provider: str, ok: bool, error: str | None = None) -> None:
     with _lock, _connect() as db:
         db.execute(
