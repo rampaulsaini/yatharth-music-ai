@@ -1,3 +1,1 @@
-#!/usr/bin/env bash
-set -euo pipefail
-uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}"
+#!/usr/bin/env bash\nset -euo pipefail\nexport MPLBACKEND="${MPLBACKEND:-agg}"\nexec uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}"\n
