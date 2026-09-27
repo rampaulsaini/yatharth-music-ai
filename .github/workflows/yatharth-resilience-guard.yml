@@ -24,6 +24,20 @@ jobs:
       - run: pip install pytest
       - run: python -m compileall main.py resilience.py tests
       - run: pytest -q tests
+      - name: Enforce single federation intake owner
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          owners = []
+          for path in Path(".github/workflows").glob("*.y*ml"):
+              text = path.read_text(encoding="utf-8")
+              if "yatharth_studio_request" in text and "repository_dispatch:" in text:
+                  owners.append(path.name)
+          expected = {"shirmani-federation-intake.yml"}
+          actual = set(owners)
+          assert actual == expected, f"Expected one canonical federation intake owner {expected}, found {actual}"
+          print("Federation intake ownership: PASS")
+          PY
       - name: Optional deployed health check
         if: ${{ vars.YATHARTH_HEALTH_URL != '' }}
         env:
