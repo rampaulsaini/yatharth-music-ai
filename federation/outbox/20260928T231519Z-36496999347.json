@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "handoff_id": "20260928T231519Z-36496999347",
+  "received_at": "2026-09-28T23:15:19.923555+00:00",
+  "source_repository": "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-",
+  "source_workflow": "SHIRMANI Inter-Repository Automission Orchestrator",
+  "source_run_id": "36496986611",
+  "automation_mode": "CONTINUOUS___SHIRMANI__REPOSITOR",
+  "brief": "Automission continuity brief: continue verified research-to-creative production work.",
+  "format": "animated-film",
+  "status": "READY_FOR_STUDIO",
+  "next_action": "open-in-yatharth-creative-studio",
+  "pipeline": [
+    "story",
+    "characters",
+    "storyboard",
+    "music",
+    "animation",
+    "editing",
+    "quality-review"
+  ],
+  "policies": {
+    "approved_source_only": true,
+    "no_secret_exposure": true,
+    "no_fabricated_rendering_claims": true,
+    "human_review_before_publication": true,
+    "provider_neutral_adapters": true
+  },
+  "studio_route": "/studio.html"
+}
