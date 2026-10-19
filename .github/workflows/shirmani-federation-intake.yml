@@ -1,8 +1,8 @@
 name: Shirmani Federation - Creative Studio Intake
 
 on:
-  repository_dispatch:
-    types: [yatharth_studio_request]
+  # Live yatharth_studio_request events are owned by the dedicated receiver.
+  # Keeping this workflow manual-only prevents duplicate downstream intake.
   workflow_dispatch:
     inputs:
       brief:
