@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "project": "Yatharth Omniverse",
+  "channels": [
+    {"id":"music","name":"Yatharth Music AI","kind":"music","status":"READY","adapter":"ace-step"},
+    {"id":"podcast","name":"Yatharth Live Podcast","kind":"podcast","status":"PLANNED","adapter":null},
+    {"id":"news","name":"Yatharth Live News","kind":"news","status":"PLANNED","adapter":null},
+    {"id":"games","name":"Yatharth Live Games","kind":"games","status":"PLANNED","adapter":null},
+    {"id":"cartoon","name":"Yatharth Live Cartoon","kind":"animation","status":"PLANNED","adapter":null},
+    {"id":"stream","name":"Yatharth Live Streaming","kind":"streaming","status":"PLANNED","adapter":null},
+    {"id":"products","name":"Yatharth Digital Products","kind":"commerce","status":"READY","adapter":"storefront"},
+    {"id":"production","name":"Yatharth Creative Studio","kind":"production","status":"READY","adapter":"studio-plan"}
+  ],
+  "truth_policy": "Public status must reflect verified provider/runtime state. Planned adapters are never presented as live."
+}
