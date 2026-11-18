@@ -34,13 +34,17 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
           SOURCE_WORKFLOW: ${{ github.event.client_payload.source_workflow }}
+          SOURCE_RUN_ID: ${{ github.event.client_payload.source_run_id }}
+          EVENT_SENDER: ${{ github.event.sender.login }}
         run: |
           set -euo pipefail
           if [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            test "$EVENT_SENDER" = "rampaulsaini"
             test "$SOURCE_REPOSITORY" = "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-"
             test "$SOURCE_WORKFLOW" = "SHIRMANI Inter-Repository Automission Orchestrator"
+            [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
           fi
-          echo "Approved federation source."
+          echo "Approved federation source and sender."
 
       - name: Build federation receipt and automission hand-off
         env:
@@ -99,6 +103,9 @@ jobs:
           source_run_id = os.getenv("SOURCE_RUN_ID") or run_id
           if not source_run_id.isdigit():
               raise SystemExit("Invalid source_run_id for federation receipt.")
+          receipt_path = f"automation/inbox/yatharth-studio-request-{source_run_id}.json"
+          if os.path.exists(receipt_path):
+              raise SystemExit("Duplicate source_run_id: existing receipt is immutable; refusing overwrite.")
           receipt = {
             "schema": "yatharth-studio-automission-handoff/v1",
             "status": "RECEIVED",
@@ -114,7 +121,8 @@ jobs:
             "format": fmt
           }
           os.makedirs("automation/inbox", exist_ok=True)
-          with open(f"automation/inbox/yatharth-studio-request-{source_run_id}.json", "w", encoding="utf-8") as f:
+          # Exclusive creation is a second guard against accidental receipt replacement.
+          with open(receipt_path, "x", encoding="utf-8") as f:
               json.dump(receipt, f, ensure_ascii=False, indent=2)
           PY
 
