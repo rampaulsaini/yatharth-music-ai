@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field, field_validator
 from resilience import delete_task as durable_delete_task, init_state, load_tasks, mark_provider, provider_snapshot, recover_inflight, save_task
 
 load_dotenv()
+os.environ.setdefault("MPLBACKEND", "Agg")
 
 DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 ENGINE_URL = os.getenv("MUSIC_ENGINE_URL", "http://127.0.0.1:8001").rstrip("/")
@@ -505,7 +506,12 @@ async def home():
     return FileResponse(ROOT / "index.html")
 
 
-for asset in ("app.js", "style.css", "manifest.json"):
+@app.get("/platform.html")
+async def platform():
+    return FileResponse(ROOT / "platform.html")
+
+
+for asset in ("app.js", "style.css", "manifest.json", "platform.css"):
     app.get(f"/{asset}")(lambda asset=asset: FileResponse(ROOT / asset))
 
 

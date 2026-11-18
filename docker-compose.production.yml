@@ -1,0 +1,44 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      DEMO_MODE: "false"
+      MPLBACKEND: "Agg"
+      TRUST_PROXY: "true"
+      CORS_ORIGINS: "${CORS_ORIGINS:-}"
+      MUSIC_ENGINE_URL: "${MUSIC_ENGINE_URL:-http://acestep:8001}"
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=4)"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      acestep:
+        condition: service_healthy
+
+  acestep:
+    image: ghcr.io/ace-step/ace-step:1.5
+    restart: unless-stopped
+    environment:
+      MPLBACKEND: "Agg"
+      PORT: "8001"
+    expose:
+      - "8001"
+    volumes:
+      - acestep-model-cache:/root/.cache
+      - yatharth-audio:/outputs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=4)"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+volumes:
+  acestep-model-cache:
+  yatharth-audio:
