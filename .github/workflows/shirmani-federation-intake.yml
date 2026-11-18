@@ -28,19 +28,36 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Enforce main-only receipt publication
+        env:
+          REF: ${{ github.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "Receipt publication is restricted to the main branch; received $REF." >&2
+            exit 1
+          fi
 
       - name: Validate approved federation source
         env:
           EVENT_NAME: ${{ github.event_name }}
           SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
           SOURCE_WORKFLOW: ${{ github.event.client_payload.source_workflow }}
+          SOURCE_RUN_ID: ${{ github.event.client_payload.source_run_id }}
+          EVENT_SENDER: ${{ github.event.sender.login }}
         run: |
           set -euo pipefail
           if [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            test "$EVENT_SENDER" = "rampaulsaini"
             test "$SOURCE_REPOSITORY" = "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-"
             test "$SOURCE_WORKFLOW" = "SHIRMANI Inter-Repository Automission Orchestrator"
+            [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
           fi
-          echo "Approved federation source."
+          echo "Approved federation source and sender."
 
       - name: Build federation receipt and automission hand-off
         env:
@@ -50,6 +67,7 @@ jobs:
           SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repository }}
           SOURCE_WORKFLOW: ${{ github.event.client_payload.source_workflow }}
           SOURCE_RUN_ID: ${{ github.event.client_payload.source_run_id }}
+          RECEIPT_PATH: ${{ github.event.client_payload.receipt_path }}
           AUTOMATION_MODE: ${{ github.event.client_payload.automation_mode }}
         run: |
           set -euo pipefail
@@ -99,6 +117,16 @@ jobs:
           source_run_id = os.getenv("SOURCE_RUN_ID") or run_id
           if not source_run_id.isdigit():
               raise SystemExit("Invalid source_run_id for federation receipt.")
+          receipt_path = (os.getenv("RECEIPT_PATH") or "").strip()
+          if not receipt_path:
+              receipt_path = f"automation/inbox/yatharth-studio-request-{source_run_id}.json"
+          if (not receipt_path.startswith("automation/inbox/") or
+                  receipt_path.startswith("/") or
+                  ".." in receipt_path.split("/") or
+                  not receipt_path.endswith(".json")):
+              raise SystemExit("Invalid receipt_path: expected a .json file under automation/inbox/.")
+          if os.path.exists(receipt_path):
+              raise SystemExit("Duplicate source_run_id: existing receipt is immutable; refusing overwrite.")
           receipt = {
             "schema": "yatharth-studio-automission-handoff/v1",
             "status": "RECEIVED",
@@ -113,8 +141,9 @@ jobs:
             "brief": brief,
             "format": fmt
           }
-          os.makedirs("automation/inbox", exist_ok=True)
-          with open(f"automation/inbox/yatharth-studio-request-{source_run_id}.json", "w", encoding="utf-8") as f:
+          os.makedirs(os.path.dirname(receipt_path), exist_ok=True)
+          # Exclusive creation is a second guard against accidental receipt replacement.
+          with open(receipt_path, "x", encoding="utf-8") as f:
               json.dump(receipt, f, ensure_ascii=False, indent=2)
           PY
 
@@ -130,13 +159,19 @@ jobs:
           fi
           git commit -m "Record Shirmani creative studio automission hand-off"
 
+      - name: Publish receipt with step-scoped credential
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          auth_header="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           for attempt in 1 2 3 4 5; do
-            if git push origin HEAD:main; then
+            if git -c http.extraheader="AUTHORIZATION: basic $auth_header" push origin HEAD:refs/heads/main; then
               echo "Federation receipt published on attempt $attempt."
               exit 0
             fi
             echo "Main branch moved during receipt publication; rebasing before retry ($attempt/5)."
-            git fetch origin main
+            git -c http.extraheader="AUTHORIZATION: basic $auth_header" fetch origin main
             git rebase origin/main
           done
 

@@ -30,6 +30,10 @@ jobs:
           from pathlib import Path
           owners = []
           for path in Path(".github/workflows").glob("*.y*ml"):
+              # This guard contains the strings it is checking inside its own
+              # test code; it is not a federation intake workflow.
+              if path.name == "yatharth-resilience-guard.yml":
+                  continue
               text = path.read_text(encoding="utf-8")
               if "yatharth_studio_request" in text and "repository_dispatch:" in text:
                   owners.append(path.name)
