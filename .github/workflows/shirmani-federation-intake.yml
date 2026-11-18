@@ -28,6 +28,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Enforce main-only receipt publication
         env:
@@ -157,13 +159,19 @@ jobs:
           fi
           git commit -m "Record Shirmani creative studio automission hand-off"
 
+      - name: Publish receipt with step-scoped credential
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          auth_header="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           for attempt in 1 2 3 4 5; do
-            if git push origin HEAD:main; then
+            if git -c http.extraheader="AUTHORIZATION: basic $auth_header" push origin HEAD:refs/heads/main; then
               echo "Federation receipt published on attempt $attempt."
               exit 0
             fi
             echo "Main branch moved during receipt publication; rebasing before retry ($attempt/5)."
-            git fetch origin main
+            git -c http.extraheader="AUTHORIZATION: basic $auth_header" fetch origin main
             git rebase origin/main
           done
 
