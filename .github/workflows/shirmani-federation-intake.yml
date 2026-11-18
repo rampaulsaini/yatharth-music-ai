@@ -40,7 +40,7 @@ jobs:
           set -euo pipefail
           if [ "$EVENT_NAME" = "repository_dispatch" ]; then
             test "$EVENT_SENDER" = "rampaulsaini"
-            test "$SOURCE_REPOSITORY" = "rampaulsa ini/Shirmani-Research-Institute-Shirmani-Research-Institute-" || test "$SOURCE_REPOSITORY" = "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-"
+            test "$SOURCE_REPOSITORY" = "rampaulsaini/Shirmani-Research-Institute-Shirmani-Research-Institute-"
             test "$SOURCE_WORKFLOW" = "SHIRMANI Inter-Repository Automission Orchestrator"
             [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
           fi
