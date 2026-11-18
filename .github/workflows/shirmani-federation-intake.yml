@@ -29,6 +29,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Enforce main-only receipt publication
+        env:
+          REF: ${{ github.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "Receipt publication is restricted to the main branch; received $REF." >&2
+            exit 1
+          fi
+
       - name: Validate approved federation source
         env:
           EVENT_NAME: ${{ github.event_name }}
